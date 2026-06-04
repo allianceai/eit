@@ -1,0 +1,266 @@
+\section{Method}\label{sec:method}
+
+\subsection{Uncertainty decomposition via random forest ensembles}\label{sec:method:uncert}
+
+We train an ensemble of $M=5$ random forests \cite{breiman2001random}, each with
+$T=100$ trees and minimum leaf size $5$, on the full training set. For each
+instance $\mathbf{x}_i$, each tree $t$ in forest $m$ produces a class probability
+vector $\hat{p}_{m,t}(\mathbf{x}_i)$. Following Shaker and H\"ullermeier
+\cite{shaker2020aleatoric,hullermeier2021aleatoric}, we decompose the total
+predictive uncertainty:
+\begin{equation}
+\underbrace{H[\bar{p}(\mathbf{x}_i)]}_{\text{total}}
+= \underbrace{\frac{1}{MT}\sum_{m,t} H[\hat{p}_{m,t}(\mathbf{x}_i)]}_{\text{aleatoric}}
++ \underbrace{H[\bar{p}(\mathbf{x}_i)] - \frac{1}{MT}\sum_{m,t} H[\hat{p}_{m,t}(\mathbf{x}_i)]}_{\text{epistemic}}
+\label{eq:uncertainty}
+\end{equation}
+where $\bar{p}(\mathbf{x}_i) = \frac{1}{MT}\sum_{m,t}\hat{p}_{m,t}(\mathbf{x}_i)$
+is the ensemble-averaged prediction and $H[\cdot]$ denotes Shannon entropy.
+
+The decomposition separates two distinct sources of error. Aleatoric uncertainty
+captures the irreducibility of the data-generating process: it is high in regions
+of genuine class overlap. Epistemic uncertainty captures the limits of the current
+sample: it is high where the model has seen insufficient training data. This
+distinction matters for rebalancing. Boundary-overlap errors (high aleatoric) are
+not correctable by adding more data of the existing class; sparse-region errors
+(high epistemic) are exactly where additional same-class evidence helps.
+
+By contrast, the k-nearest-neighbour categorizations of Napiera{\l}a \&
+Stefanowski \cite{napierala2016types} and related work \cite{smith2014instance}
+measure only local same-class geometry, which conflates these two sources: an
+instance with $0$ same-class neighbours might be a labelling error, a
+Bayes-boundary point in a high-overlap region, or a genuinely under-represented
+sparse instance. We use the aleatoric--epistemic decomposition purely as a
+\emph{diagnostic} --- to localize the boundary/overlap region on real data and
+characterize the error population (\S\ref{sec:results}) --- not as a new
+oversampler.
+
+\paragraph{Out-of-bag estimation (no in-sample optimism).} Every
+\emph{model-derived} signal that drives the categorization is computed from
+\emph{out-of-bag} (OOB) predictions --- i.e.\ for each instance, only from the
+trees that did not bootstrap it. An instance is an \emph{error} if the OOB
+ensemble majority vote disagrees with its label; the true-class probability (TCP,
+\S\ref{sec:method:triage}) is the OOB estimate; the noise signals use OOB
+confidence and consensus. The remaining signals (the local class ratio) are
+properties of the data geometry, not model predictions. The error set and its
+categories are therefore \emph{not} in-sample artefacts of forests fit and scored
+on the same data. As a strict check we additionally re-derive the categories under
+inner cross-validation (forests fit on inner-training folds categorize held-out
+instances, so even the aleatoric/epistemic decomposition is out-of-fold); the
+category distribution and the aleatoric/epistemic separation are essentially
+unchanged (\appref{app:oof}). We then categorize each error instance.
+
+\subsection{Three-way error categorization}\label{sec:method:triage}
+
+For each error instance $\mathbf{x}_i$ we compute a \emph{local class ratio}: the
+fraction of $k$-nearest neighbours sharing its label, normalized by the global
+class frequency. Low values indicate the class is locally under-represented (a
+data gap); high values indicate adequate local representation despite the error
+(genuine overlap). The categorization rules are:
+\begin{description}
+\item[\textbf{Cat\,1 (Noise):}] $\mathrm{TCP}(\mathbf{x}_i) < \tau_{\text{noise}}$,
+  where TCP is the ensemble true-class probability. Very low TCP indicates likely
+  mislabeling; $\tau_{\text{noise}}=0.12$ gates noise from sparse-boundary errors.
+\item[\textbf{Cat\,2 (Data-limited):}] not Cat\,1, and
+  $\mathrm{class\_ratio}(\mathbf{x}_i) < \tau_{\text{cat2}}$ ($\tau_{\text{cat2}}=0.4$).
+  The class is locally under-represented; the error arises from insufficient
+  same-class data, not overlap.
+\item[\textbf{Cat\,3 (Irreducible):}] neither Cat\,1 nor Cat\,2 --- the class is
+  adequately represented locally yet the model errs, indicating genuine class
+  overlap in a model-estimated Bayes-boundary/overlap region. (We reserve the term
+  ``Bayes boundary'' for the controlled experiments of \S\ref{sec:results:mechanism}
+  where it is known; on real data Cat\,3 is an \emph{estimate} of that region.)
+\end{description}
+To remove the imbalance bias of an off-the-shelf ensemble (a majority-biased
+ensemble suppresses minority TCP and over-flags minority instances as noise), the
+ensemble uses class-balanced bootstrap sampling when computing the triage.
+
+The two thresholds are fixed at $\tau_{\text{noise}}=0.12$, $\tau_{\text{cat2}}=0.4$
+across \emph{all} datasets --- they are defaults, not tuned hyperparameters. The
+categorization is robust to their exact values: sweeping
+$\tau_{\text{noise}}\in[0.05,0.30]$ and $\tau_{\text{cat2}}\in[0.2,0.6]$, $74\%$ of
+datasets show $<0.5\%$ downstream-accuracy variation across all configurations, and
+the category assignments preserve their relative structure throughout
+(\appref{app:sensitivity}).
+
+\subsection{Remedy decomposition of the minority deficit}\label{sec:method:remedy}
+
+The triage characterizes \emph{why} an instance is hard; our central instrument
+turns this into \emph{which remedy applies} to the instances that actually drive
+the deficit --- the misclassified minority. For each minority instance that the
+ensemble misclassifies at the default threshold (out-of-bag $\Pr(\text{minority})
+<\tfrac12$), we ask, in order:
+\begin{description}
+\item[\textbf{Threshold-recoverable:}] is it classified \emph{correctly} once the
+  decision threshold is moved to the value $\tau^\star$ that maximizes balanced
+  accuracy on out-of-fold predictions (i.e.\ $\Pr(\text{minority})\ge\tau^\star$)?
+  Then the model already \emph{ranks} it correctly and only the default cutoff was
+  wrong --- the remedy is to move the threshold, no data required. This axis,
+  which conditions on rank-correctness of an already-misclassified instance, is
+  what distinguishes our decomposition from difficulty taxonomies.
+\item[\textbf{Data-reducible (epistemic):}] otherwise, if the instance is Cat\,2
+  (locally under-represented, high epistemic uncertainty) --- the remedy is more
+  same-class data there (collection or targeted generation).
+\item[\textbf{Irreducible (aleatoric):}] otherwise, if it is Cat\,3
+  (model-estimated overlap, high aleatoric uncertainty) --- no remedy in our menu
+  recovers it. On real data this is an \emph{estimated}-irreducible, aleatoric
+  residue, not a proven Bayes-irreducible one.
+\end{description}
+(Cat\,1 noise is reported separately.) The threshold $\tau^\star$ and the
+$\Pr(\text{minority})$ used here are out-of-bag, so the decomposition is not an
+in-sample artefact (\appref{app:oof}). This three-way, remedy-mapped split
+of the \emph{minority error population} is the paper's headline diagnostic; its
+empirical shape (\S\ref{sec:results:remedy}) explains why a threshold move recovers
+most of the deficit and identifies the minority of cases where data genuinely helps.
+
+\paragraph{Remedy-irreducible is not the Cat\,3 set.} The remedy decomposition is
+not a relabelling of the triage, and the \emph{irreducible} remedy class is much
+smaller than the Cat\,3 (boundary/overlap) category (Figure~\ref{fig:remedy}). Two
+things separate them.
+First, the remedy decomposition runs only on the \emph{misclassified minority},
+whereas the Cat\,3 fraction is reported over \emph{all} errors. Second, and more
+importantly, it gives threshold-recoverability \emph{priority} over the triage
+category: an error the triage places in the boundary/overlap region (Cat\,3) is
+still counted \emph{threshold-recoverable} whenever the model ranks it above
+$\tau^\star$ --- the default $\tfrac12$ cutoff was wrong, but the \emph{ranking} is
+right. The irreducible remedy class therefore contains only the Cat\,3 minority
+errors that remain misclassified \emph{after} the threshold move, a strict subset
+of Cat\,3. This is why the irreducible remedy fraction ($\sim$16\% of the minority
+deficit, \S\ref{sec:results:remedy}) is far below the Cat\,3 share of all errors
+($\sim$85\%, \S\ref{sec:results:interventional}): most boundary errors are ranked
+well enough to be recovered by moving the decision, not by adding or accepting data.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  box/.style={draw, rounded corners, align=center, inner sep=3pt, text width=23mm, minimum height=9mm},
+  rem/.style={box, fill=blue!8},
+  cat/.style={box, fill=black!6},
+  q/.style={draw, diamond, aspect=2.4, align=center, inner sep=0pt, text width=17mm, fill=yellow!18},
+  lbl/.style={font=\footnotesize\itshape},
+  >={Stealth[length=2mm]}
+]
+\node[box, fill=black!4, text width=46mm] (err)
+  {Misclassified minority error\\[1pt]{\footnotesize Cat\,3 $\approx 85\%$ of \emph{all} errors}};
+\node[q, below=6mm of err] (q1) {ranks above $\tau^\star$?};
+\node[rem, left=16mm of q1] (tr) {\textbf{Threshold-}\\\textbf{recoverable}\\$69\%$};
+\node[q, below=9mm of q1] (q2) {triage\\category};
+\node[cat, below=12mm of q2] (c3) {\textbf{Irreducible}\\Cat\,3, aleatoric\\$16\%$};
+\node[cat, left=7mm of c3] (c2) {\textbf{Data-reducible}\\Cat\,2, epistemic\\$7\%$};
+\node[cat, right=7mm of c3] (c1) {Noise\\Cat\,1\\$7\%$};
+\draw[->] (err) -- (q1);
+\draw[->] (q1) -- node[above,lbl]{yes} (tr);
+\draw[->] (q1) -- node[right,lbl]{no} (q2);
+\draw[->] (q2.south) -- (c3.north);
+\draw[->] (q2.south) -- (c2.north);
+\draw[->] (q2.south) -- (c1.north);
+\end{tikzpicture}
+\caption{How the misclassified minority filters into the three remedy classes. The
+decomposition asks threshold-recoverability \emph{first}: an error the model already
+ranks above the tuned threshold $\tau^\star$ is \emph{threshold-recoverable} whatever
+its triage category. Only the residue is split by triage into data-reducible
+(Cat\,2), irreducible (Cat\,3), or noise (Cat\,1). Because most boundary (Cat\,3)
+errors are well-ranked, the \emph{irreducible} remedy class ($16\%$) is a strict
+subset of Cat\,3 --- which is itself $\sim$85\% of \emph{all} errors --- which is why
+$16\% \ll 85\%$. Percentages are means over datasets (Table~\ref{tab:reducibility}).}
+\label{fig:remedy}
+\end{figure}
+
+\subsection{Why boundary interpolation crosses the posterior boundary}\label{sec:method:theory}
+
+The mechanism has a simple analytic basis. Let class~$1$ be the minority, write the
+class-posterior $\eta(\mathbf{x})=\Pr(y{=}1\mid\mathbf{x})$, and let the Bayes
+boundary be $\mathcal{B}=\{\mathbf{x}:\eta(\mathbf{x})=\tfrac12\}$ with
+majority-posterior region $\mathcal{M}=\{\eta<\tfrac12\}$ (where the Bayes-optimal
+label is the majority). SMOTE forms a synthetic point
+$\mathbf{z}=\mathbf{x}_i+\lambda(\mathbf{x}_j-\mathbf{x}_i)$ with
+$\lambda\sim\mathcal{U}(0,1)$, $\mathbf{x}_i$ a minority seed and $\mathbf{x}_j$
+one of its minority $k$-nearest neighbours, and labels $\mathbf{z}$ as
+\emph{minority}.
+
+\begin{proposition}\label{prop:cross}
+Assume $\eta$ is continuous along the segment $[\mathbf{x}_i,\mathbf{x}_j]$.
+\begin{enumerate}
+\item[(i)] Suppose a minority seed lies in the overlap region,
+  $\eta(\mathbf{x}_i)<\tfrac12$, and is interpolated with a neighbour
+  $\eta(\mathbf{x}_j)<\tfrac12$. By continuity $\mathcal{M}$ contains an
+  $\varepsilon$-neighbourhood of each endpoint, so every \emph{sufficiently short}
+  interpolation step from either endpoint yields $\mathbf{z}\in\mathcal{M}$; if in
+  addition $\eta$ is quasiconvex along the segment (in particular, approximately
+  affine, as in (ii)), then \emph{every} $\mathbf{z}\in[\mathbf{x}_i,\mathbf{x}_j]$
+  lies in $\mathcal{M}$. Such a $\mathbf{z}$ carries a minority label in a region
+  the Bayes rule assigns to the majority, i.e.\ it acts as label noise.
+\item[(ii)] If the segment crosses $\mathcal{B}$, the probability that
+  $\mathbf{z}\in\mathcal{M}$ equals
+  $\big|\{\lambda\in[0,1]:\eta(\mathbf{x}_i+\lambda(\mathbf{x}_j-\mathbf{x}_i))<\tfrac12\}\big|\in(0,1)$.
+  When $\eta$ is approximately affine over the segment with
+  $\eta(\mathbf{x}_i)\ge\tfrac12>\eta(\mathbf{x}_j)$, this probability is
+  $\dfrac{\tfrac12-\eta(\mathbf{x}_j)}{\eta(\mathbf{x}_i)-\eta(\mathbf{x}_j)}$.
+\item[(iii)] Consequently the expected fraction of synthetic minority mass placed
+  in $\mathcal{M}$ is non-decreasing in the local overlap (the minority probability
+  mass near and beyond $\mathcal{B}$) and in the proportion of seeds drawn from the
+  boundary/overlap region.
+\end{enumerate}
+\end{proposition}
+
+\noindent\emph{Proof sketch.} (i) $\mathcal{M}=\{\eta<\tfrac12\}$ is the open
+sublevel set of a continuous function, so it contains an $\varepsilon$-ball around
+each interior endpoint and sufficiently short interpolation steps stay in
+$\mathcal{M}$. A sublevel set need not be convex, so the segment is guaranteed to
+remain in $\mathcal{M}$ \emph{in its entirety} only under the added quasiconvexity
+(or approximately-affine) hypothesis; absent it, an interior excursion above
+$\tfrac12$ is possible but does not affect the label-noise conclusion for the
+points that do fall in $\mathcal{M}$. (ii) follows from the
+intermediate value theorem and, in the affine case, from solving
+$\eta(\mathbf{x}_i)+\lambda[\eta(\mathbf{x}_j)-\eta(\mathbf{x}_i)]=\tfrac12$ for the
+crossing $\lambda^\star$ and integrating the uniform density over
+$\{\eta<\tfrac12\}$. (iii) follows by taking expectations over the seed/neighbour
+sampling distribution, whose support shifts toward $\mathcal{B}$ as overlap and
+boundary-seed proportion grow. \hfill$\square$
+
+This explains three observations below: standard SMOTE places an
+\emph{overlap-dependent} fraction of synthetic points across a \emph{known}
+boundary (\S\ref{sec:results:mechanism}); augmenting estimated-boundary (Cat\,3)
+seeds reproduces the tradeoff while non-boundary seeds do not
+(\S\ref{sec:results:interventional}); and boundary-\emph{targeting} variants
+(Borderline-SMOTE, ADASYN) raise exactly the boundary-seed proportion of
+clause~(iii), so they do not resolve the tradeoff.
+
+\subsection{Strategy menu}\label{sec:method:menu}
+
+We evaluate a menu of 16 rebalancing strategies grouped into five families:
+(i)~\emph{do nothing} --- train on the raw data;
+(ii)~\emph{threshold-moving} --- choose the decision threshold on out-of-fold
+training predictions to maximize balanced accuracy (binary tasks), leaving the
+data untouched;
+(iii)~\emph{cost-sensitive} --- class-balanced sample weights
+\cite{elkan2001foundations}, and triage-informed weighting (upweighting the
+correct same-class neighbours of Cat\,2 errors);
+(iv)~\emph{generative oversampling} --- SMOTE \cite{chawla2002smote} and eight
+variants (Borderline-SMOTE, ADASYN, Safe-Level-SMOTE, ProWSyn, MWMOTE,
+polynom-fit, Napierala-guided), plus \emph{clean-masked SMOTE} (SMOTE seeded only
+from non-boundary, non-noise minority instances, i.e.\ excluding Cat\,1/Cat\,3);
+(v)~\emph{balanced ensembles} --- balanced random forest \cite{chen2004using} and
+EasyEnsemble \cite{liu2009exploratory}.
+The two triage-derived members (clean-masked SMOTE, triage weighting)
+operationalize the diagnostic; as \S\ref{sec:results} shows they do not beat
+the strong non-generative families, and we include them for completeness rather
+than as headline methods.
+
+\subsection{Meta-features and prescriptive selection}\label{sec:method:selection}
+
+To ask whether a dataset's structure determines its best strategy, we describe
+each dataset by meta-features in three groups: (a)~\emph{error-structure} from the
+triage (Cat\,1/2/3 fractions and masses, minority error rate, learnable-minority
+fraction); (b)~\emph{complexity / separability} --- Fisher's maximum discriminant
+ratio (F1) and the boundary/overlap measures N1, N2, N3 \cite{komorniczak2022data};
+and (c)~\emph{basic} descriptors (imbalance ratio, size, dimensionality, class
+count). A leave-one-dataset-out selector predicts, from these meta-features, which
+menu strategy maximizes the target metric on the held-out dataset. We evaluate two
+designs --- a per-method regressor (predict each strategy's score, take the
+argmax) and a direct method-classifier --- against fixed baselines (always-SMOTE,
+the best single fixed strategy), an imbalance-ratio-only rule, and a per-dataset
+oracle. Significance is assessed by paired Wilcoxon tests across datasets with
+bootstrap confidence intervals, and selector stability is checked across random
+seeds.

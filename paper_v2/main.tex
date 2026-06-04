@@ -1,0 +1,51 @@
+% paper_v2/main.tex
+\documentclass[runningheads]{llncs}
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning}
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage[expansion=false]{microtype}
+\usepackage{xcolor}
+% llncs predefines the `proposition` theorem environment; no declaration needed.
+\newcommand{\OOFCATSHIFT}{1.9}  % mean |in-sample - OOF| Cat3-among-errors shift (pp); set from triage_oof
+% LLNCS appendix \ref expands to a bare letter ("B"), so the literal word is needed
+% here; \appref keeps the shared section sources class-agnostic (see manuscript_neurocomputing.tex).
+\newcommand{\appref}[1]{Appendix~\ref{#1}}
+\emergencystretch=2em  % absorb minor line-breaking overflows
+
+\begin{document}
+
+\title{Don't Oversample the Boundary: A Remedy Decomposition of the\\
+       Minority Deficit in Imbalanced Learning}
+\titlerunning{Don't Oversample the Boundary}
+\author{Cameron Hamilton}
+\institute{Alliance AI \and \email{cameron@allianceai.co}}
+\maketitle
+
+\begin{abstract}
+\input{sections/00_abstract}
+\keywords{Class imbalance \and SMOTE \and Decision threshold \and Calibration
+\and Uncertainty decomposition \and Data complexity}
+\end{abstract}
+
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_method}
+\input{sections/04_experimental_design}
+\input{sections/05_results}
+\input{sections/06_discussion}
+\input{sections/07_conclusion}
+
+\input{sections/A_appendix}
+
+\input{sections/Z_declarations}
+
+\bibliographystyle{splncs04}
+\bibliography{references}
+
+\end{document}

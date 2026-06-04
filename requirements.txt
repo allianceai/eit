@@ -1,0 +1,14 @@
+# Tested with Python 3.12. Key packages pinned to the versions used in the paper.
+numpy==2.4.4
+pandas==3.0.2
+scikit-learn==1.6.1
+xgboost==3.2.0
+imbalanced-learn==0.14.1
+smote-variants==1.0.1
+lightgbm
+scipy
+pyarrow
+matplotlib
+threadpoolctl
+openml
+rich

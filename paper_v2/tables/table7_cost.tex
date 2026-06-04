@@ -1,0 +1,26 @@
+\begin{table}[t]
+\centering
+\caption{Triage wall-clock cost vs.\ a single XGBoost fit (mean over repeats). Overhead = triage time as a percentage of total pipeline time. The triage is a one-time, classifier-agnostic preprocessing cost.}
+\label{tab:cost}
+\begin{tabular}{lrrrrr}
+\toprule
+Dataset & $n$ & $d$ & Triage (s) & XGB (s) & Overhead (\%) \\
+\midrule
+\texttt{iris} & 150 & 4 & 1.04 & 0.15 & 87.2 \\
+\texttt{wine} & 178 & 13 & 1.31 & 0.08 & 94.1 \\
+\texttt{sonar} & 208 & 60 & 1.10 & 0.12 & 90.2 \\
+\texttt{glass} & 214 & 9 & 1.17 & 0.96 & 64.8 \\
+\texttt{ionosphere} & 351 & 34 & 1.05 & 0.12 & 89.9 \\
+\texttt{vehicle} & 846 & 18 & 1.27 & 0.40 & 76.1 \\
+\texttt{vowel} & 990 & 12 & 1.91 & 1.59 & 56.0 \\
+\texttt{credit-g} & 1000 & 20 & 1.43 & 0.16 & 89.8 \\
+\texttt{segment} & 2310 & 19 & 1.56 & 0.93 & 63.4 \\
+\texttt{phoneme} & 5404 & 5 & 2.71 & 0.74 & 77.6 \\
+\texttt{satimage} & 6430 & 36 & 2.87 & 2.19 & 58.5 \\
+\texttt{eeg-eye-state} & 14980 & 14 & 10.20 & 0.60 & 94.6 \\
+\texttt{MagicTelescope} & 19020 & 10 & 8.40 & 1.25 & 88.8 \\
+\texttt{bank-marketing} & 45211 & 16 & 16.79 & 0.84 & 95.6 \\
+\texttt{covertype} & 50000 & 54 & 32.63 & 49.05 & 50.1 \\
+\bottomrule
+\end{tabular}
+\end{table}

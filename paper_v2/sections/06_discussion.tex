@@ -1,0 +1,87 @@
+\section{Discussion}\label{sec:discussion}
+
+\paragraph{The tradeoff is a decision problem, not a data problem.} Our central
+finding is that the minority-class deficit \emph{decomposes by remedy} and is
+predominantly \emph{threshold-recoverable}: across 79 datasets a mean of $69\%$ of
+minority errors ($74\%$ at $\mathrm{IR}>3$) are corrected by moving the decision
+threshold alone, with only $\sim$7\% data-reducible and $\sim$16\% irreducible.
+This explains a regularity the field has documented but not explained --- that
+resampling leaves ranking (AUC) unchanged and a threshold shift reproduces its
+benefit without synthetic generation and with better calibration
+\cite{provost2000imbalanced,elor2022smote,goorbergh2022harm,dalpozzolo2015calibrating}
+--- and reframes the long-observed accuracy/recall tradeoff: oversampling is an
+implicit, inefficient enactment of a threshold move (it shifts the operating point
+by generating across the overlap boundary, at an accuracy and calibration cost),
+not a way to build a better classifier. Consistent with this, once every strategy
+is given the same threshold tuning the large default-threshold gap between the
+families collapses to within $\pm1$\,pp.
+
+\paragraph{Exclusion vs.\ targeting.} The dominant paradigm in oversampling
+research \emph{targets} sparse or boundary regions for generation
+(ADASYN \cite{he2008adasyn}, Borderline-SMOTE \cite{han2005borderline}, and a long
+tail of variants \cite{kovacs2019smote}). Our mechanism explains why this has not
+resolved the tradeoff: these variants all generate at or near the boundary, which
+is exactly where generation manufactures majority-territory ``minority'' points.
+Consistent with this, masking the boundary seeds from SMOTE removes both the
+accuracy cost \emph{and} the balanced-accuracy benefit --- corroborating that the
+benefit \emph{is} the boundary generation --- so the productive move is not a
+better oversampler but a different lever entirely.
+
+\paragraph{The menu matters more than the selector.} A recent line of work asks
+which data characteristics should pick the resampler
+\cite{jiang2026beyond,carvalho2025resampling}, but its rules barely beat
+always-SMOTE. We find the reason: given a menu that includes the dominant
+non-generative strategies, even an imbalance-ratio-only rule beats always-SMOTE,
+and a learned selector over rich error-structure and complexity meta-features adds
+only a modest, robust increment over the single best fixed strategy (balanced
+random forest) --- significant on balanced accuracy and G-mean, absent on MCC. The
+practical recommendation is therefore not a sophisticated selector but a change of
+default: prefer a strong non-generative strategy, and reserve oversampling for the
+$\sim$15\% of regimes where the map (\S\ref{sec:results:regime}) says it
+wins.
+
+\paragraph{Relation to prior categorization and complexity work.} Napiera{\l}a
+\& Stefanowski's instance types \cite{napierala2016types} and data-complexity
+measures \cite{komorniczak2022data,santos2023unifying} characterize imbalanced
+problems descriptively, and meta-learning relates those characteristics to
+observed performance \cite{carvalho2025resampling}. Our contribution is
+orthogonal and mechanism-level: the aleatoric--epistemic decomposition localizes
+the boundary/overlap region, and the interventional design probes \emph{why}
+boundary generation hurts, rather than reporting a correlation. This
+intervention-supported account is what the otherwise extensive selection
+literature lacks.
+
+\paragraph{Toward deep imbalanced learning.} Our base learners are tabular
+(gradient-boosted trees, random forests, logistic regression); the analysis is
+deliberately a controlled, mechanism-level foundation laid before the deep case. Two
+of its three pillars are architecture-agnostic, and we expect them to carry over. The
+remedy decomposition needs only a ranking score and an aleatoric--epistemic signal,
+both available from deep models via deep ensembles or MC-dropout
+\cite{lakshminarayanan2017simple}; and the threshold-recoverability result is the same
+operating-point logic that already explains why imbalanced-trained neural networks are
+systematically miscalibrated and recover under post-hoc threshold/temperature
+adjustment \cite{guo2017calibration}. The boundary-generation mechanism is the part
+that needs care: deep oversampling typically interpolates in a \emph{learned latent}
+space rather than the input space (e.g.\ DeepSMOTE \cite{dablain2022deepsmote}), so
+Proposition~\ref{prop:cross} would apply to the \emph{latent} posterior, whose geometry
+the encoder itself shapes. We therefore present these results as the necessary tabular
+proof-of-mechanism and offer a concrete, testable hypothesis: latent-space
+interpolation across the embedded decision boundary should reproduce the same
+accuracy/recall tradeoff, and a latent threshold move should likewise recover most of
+the minority deficit. Testing it across architectures is the natural next thread.
+
+\paragraph{Limitations.} (i) The learned selector's edge over a strong fixed
+default is small ($\sim$0.6\,pp) and metric-dependent (present on balanced
+accuracy and G-mean, absent on MCC); we report it honestly rather than as a
+headline, and conclude that a fixed non-generative default is the pragmatic
+recommendation. (ii) The triage thresholds ($\tau_{\text{noise}}=0.12$,
+$\tau_{\text{cat2}}=0.4$) are fixed across datasets; a sensitivity analysis
+(\appref{app:sensitivity}) shows category assignments and downstream
+accuracy are stable across a wide range. (iii) We validate the default-threshold
+advantage --- and its collapse to within $\pm1$\,pp at threshold parity --- across
+three tabular base learners (gradient-boosted trees, random forests, and logistic
+regression; \S\ref{sec:results:frontier}), so neither the default-threshold gap nor
+the operating-point explanation is a model-specific artefact; the extension to
+\emph{deep} imbalanced learning is its own thread, sketched above. (iv) The regime map is descriptive: a depth-3 rule does not beat
+``always use a balanced ensemble,'' so the map informs rather than automates the
+choice.

@@ -1,0 +1,83 @@
+\appendix
+
+\section{Threshold Sensitivity}\label{app:sensitivity}
+
+The triage thresholds ($\tau_{\text{noise}} = 0.12$, $\tau_{\text{cat2}} = 0.4$,
+$w = 2.0$) are fixed across all datasets. We swept each threshold across a
+range of values and measured downstream XGBoost accuracy: $\tau_{\text{noise}}
+\in [0.05, 0.30]$, $\tau_{\text{cat2}} \in [0.2, 0.6]$, $w \in [1.0, 5.0]$.
+Across the benchmark datasets, 74\% show $< 0.5\%$ accuracy
+variation across all configurations, supporting the use of fixed thresholds
+as a sensible default. The two methods (clean-masked SMOTE, triage
+weighting) maintain their relative ordering vs.\ baselines at every threshold
+configuration tested.
+
+\section{Out-of-Fold Triage Validation}\label{app:oof}
+
+The triage categories underpin the mechanistic argument (\S\ref{sec:results:interventional}),
+so we verify they are not optimistic in-sample artefacts. Two facts establish this.
+First, by construction every model-derived signal that drives the categorization is
+\emph{out-of-bag}: the error indicator is the OOB ensemble majority vote, and the
+true-class probability is the OOB estimate (\S\ref{sec:method:uncert}); the only
+non-model signal, the local class ratio, is a property of the data geometry.
+Second, as a strict check we re-derive the categories under inner $5$-fold
+cross-validation: forests fit on the inner-training folds categorize the held-out
+instances (via held-out predictions for the error indicator, true-class
+probability, and the full aleatoric/epistemic decomposition; neighbour-based
+signals are measured against the inner-training set). Over the 79 datasets, the
+Cat\,3 (irreducible) fraction among errors is essentially unchanged: the in-sample
+and out-of-fold means coincide at $0.838$, the per-dataset Spearman correlation is
+$0.97$ ($p<10^{-40}$), and the mean absolute shift is $\OOFCATSHIFT$\,pp (median
+$1.0$\,pp). The aleatoric/epistemic ordering that motivates the categories is
+preserved out-of-fold (Cat\,3 aleatoric uncertainty exceeds Cat\,2's on $80\%$ of
+datasets). The category \emph{identification} is therefore not an in-sample
+artefact. We note separately that the small real-data \emph{interventional} effect
+(\S\ref{sec:results:interventional}) is sensitive to this re-estimation: with
+out-of-fold seeds and a reduced $3\times3$ protocol the targeted-augmentation
+contrast remains directionally consistent (random augmentation null) but is no
+longer individually significant, which is why we rest the mechanism on the
+controlled experiment (\S\ref{sec:results:mechanism}) and the
+discrimination/threshold analysis (\S\ref{sec:results:frontier}) rather than on the
+real-data intervention.
+
+\section{GBM Triage Agreement}\label{app:gbm}
+
+To verify that the three-way decomposition is not specific to random
+forests, we replaced the RF ensemble with bagged XGBoost (5 bags of 100
+trees, matching the RF configuration). On a 20-dataset agreement subset,
+the GBM-based triage assigns 82\% of training instances to the same category
+as the RF-based triage. Downstream accuracy under both triages is
+comparable (mean absolute difference $0.04\%$), indicating that any
+ensemble model exposing per-tree predictions can drive the decomposition.
+
+\section{Subsampling Category-Structure Control}\label{app:subsampling}
+
+We verified that stratified subsampling to 10\,000 instances preserves the
+triage category distribution. On the five largest datasets in our
+benchmark, we computed the per-category fraction $\{p_{\text{correct}},
+p_{\text{noise}}, p_{\text{data-limited}}, p_{\text{irreducible}}\}$ on the
+full dataset and on a single stratified 10\,000-instance subsample. The
+mean absolute deviation between the two distributions is $< 2$ percentage
+points per category across all five datasets, validating the subsampling
+protocol used throughout (\S\ref{sec:results:frontier}).
+Detailed per-dataset numbers are provided in the supplementary material.
+
+\section{Computational Cost Detail}\label{app:cost}
+
+Full cost-table breakdown by dataset (extending \S\ref{sec:results:cost}):
+
+\input{tables/table7_cost.tex}
+
+The triage time scales roughly as $O(n \log n)$ in the number of training
+instances and is dominated by the random-forest fits; the local class-ratio
+computation (k-NN with $k=5$) contributes $< 5\%$ of total triage time
+across all dataset sizes.
+
+\section{Dataset Listing}\label{app:datasets}
+
+Table~\ref{tab:datasets} lists the OpenML/scikit-learn roster, including
+each dataset's OpenML ID, number of instances, features, classes, and imbalance
+ratio (majority-class count divided by minority-class count); the remaining 27
+datasets are the standard \texttt{imbalanced-learn}/KEEL benchmark suite.
+
+\input{tables/table_datasets.tex}

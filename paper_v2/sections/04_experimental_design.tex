@@ -1,0 +1,47 @@
+\section{Experimental Design}\label{sec:design}
+
+\paragraph{Datasets.} We evaluate on 79 real classification datasets: the 27
+datasets of the \texttt{imbalanced-learn}/KEEL benchmark suite (imbalance ratios
+$8$--$130$) and 52 of the 54 OpenML \cite{vanschoren2014openml} and scikit-learn
+datasets listed in \appref{app:datasets} (USPS and webpage are excluded from
+the menu evaluation for high dimensionality and sparse formatting), spanning binary
+and multiclass problems with original sizes from $150$ to $581{,}012$ instances and
+$4$ to $500$ features. We apply stratified
+subsampling to a maximum of $10{,}000$ instances per dataset, which preserves the
+triage category distribution (mean absolute deviation $<2$\,pp per category,
+\appref{app:subsampling}). The interventional experiment
+(\S\ref{sec:results:interventional}) uses the 50 datasets where minority
+size permits SMOTE seed-pool slicing. The OpenML roster is listed in
+\appref{app:datasets}.
+
+\paragraph{Strategy menu and base learner.} We evaluate the 16-strategy menu of
+\S\ref{sec:method:menu}. The base learner for non-ensemble strategies is
+XGBoost \cite{chen2016xgboost} (300 trees, max depth 6, learning rate 0.1);
+balanced random forest (300 trees) and EasyEnsemble (10 AdaBoost members) are
+themselves ensemble learners. We use $5\times5$ Repeated Stratified $K$-Fold
+cross-validation; the triage and the moved threshold are fit on the training
+split only (threshold chosen on out-of-fold training predictions, so there is no
+test leakage). Binary-only strategies (threshold-moving, EasyEnsemble) are skipped
+on multiclass datasets and excluded from those datasets' candidate sets.
+
+\paragraph{Metrics.} Balanced accuracy is the primary metric --- it is the
+objective that motivates rebalancing --- and we report accuracy alongside it to
+expose the tradeoff, plus G-mean and MCC as tradeoff-internalizing checks. We
+report win rates and Wilcoxon signed-rank \cite{wilcoxon1945individual}
+$p$-values; per-dataset values are means over the $25$ folds.
+
+\paragraph{Selection protocol.} The prescriptive selector
+(\S\ref{sec:method:selection}) is evaluated leave-one-dataset-out across the
+79 datasets: for each held-out dataset the selector is trained on the other 78 and
+its chosen strategy's realized metric is recorded. We compare against a per-dataset
+oracle, the best single fixed strategy, always-SMOTE, an imbalance-ratio-only rule,
+and random choice, with paired Wilcoxon tests, bootstrap confidence intervals on
+the mean gain, and a seed-robustness check over 8 random seeds.
+
+\paragraph{Pre-registration.} To avoid post-hoc selection of the analysis, we
+pre-specified the primary selector (a per-method regressor over all meta-features)
+and the primary metric (balanced accuracy) before running the full-menu
+evaluation. The direct method-classifier and the parsimonious feature set are
+reported as secondary analyses, and we disclose in full that the pre-registered
+regressor only ties the best fixed strategy while the classifier modestly beats it
+(\S\ref{sec:results:selection}).

@@ -1,0 +1,75 @@
+% Neurocomputing submission --- Elsevier elsarticle format.
+% NOTE: elsarticle is not installed on the local TeX here; this compiles on
+% Overleaf (elsarticle is built in) or after `tlmgr install elsarticle` /
+% `apt install texlive-publishers`. For the INITIAL submission, Elsevier's
+% "Your Paper Your Way" also accepts the single cleanly-compiling PDF from main.tex.
+\documentclass[preprint,12pt]{elsarticle}
+% Scalable (Type 1) fonts with proper ToUnicode maps so ligatures (ff, fi, ffi)
+% render and *copy/paste* correctly --- without this the default CM bitmap fonts
+% drop ligatures on extraction ("tradeoff" -> "tradeo", "fixed" -> "xed").
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[expansion=false]{microtype}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,arrows.meta,positioning}
+\usepackage{amsmath,amssymb}
+\usepackage{amsthm}
+\newtheorem{proposition}{Proposition}
+\newcommand{\OOFCATSHIFT}{1.9}  % mean |in-sample - OOF| Cat3-among-errors shift (pp); set from triage_oof
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\journal{Neurocomputing}
+
+% --- Cross-class compatibility shims (sections are shared with the LLNCS main.tex) ---
+% elsarticle appends a period to run-in \paragraph headings; our section sources
+% already include the period, so suppress the class-added one to avoid "Heading..".
+\makeatletter
+\def\els@aparagraph[#1]#2{\elsparagraph[#1]{#2}}
+\def\els@bparagraph#1{\elsparagraph*{#1}}
+\makeatother
+% elsarticle's appendix \ref already expands to "Appendix A"; \appref avoids the
+% duplicated word ("Appendix Appendix B") that a literal "Appendix~\ref" produces.
+\newcommand{\appref}[1]{\ref{#1}}
+
+\begin{document}
+\begin{frontmatter}
+
+\title{Don't Oversample the Boundary: A Remedy Decomposition of the Minority
+Deficit in Imbalanced Learning}
+
+\author[a]{Cameron Hamilton\corref{cor}}
+\ead{cameron@allianceai.co}
+\cortext[cor]{Corresponding author.}
+\affiliation[a]{organization={Alliance AI}}  % add city/country if desired
+
+\begin{abstract}
+\input{sections/00_abstract}
+\end{abstract}
+
+\begin{keyword}
+class imbalance \sep SMOTE \sep decision threshold \sep calibration
+\sep uncertainty decomposition \sep data complexity
+\end{keyword}
+
+\end{frontmatter}
+
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_method}
+\input{sections/04_experimental_design}
+\input{sections/05_results}
+\input{sections/06_discussion}
+\input{sections/07_conclusion}
+
+\input{sections/A_appendix}
+
+\input{sections/Z_declarations}
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

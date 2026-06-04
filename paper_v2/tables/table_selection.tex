@@ -1,0 +1,30 @@
+\begin{table}[t]
+\centering
+\caption{Prescriptive selection over the full 16-strategy menu, leave-one-dataset-out
+across 79 datasets (mean realized metric). A learned selector built on error-structure
+and complexity meta-features beats always-SMOTE decisively, but over the strongest
+\emph{fixed} strategy its edge is modest: the direct method-classifier robustly beats
+best-fixed on balanced accuracy (+0.64\,pp, $8/8$ seeds $p{\le}0.01$) and G-mean
+(+0.64\,pp, $8/8$ $p{\le}0.03$) but not MCC; the per-method regressor and an
+imbalance-ratio-only rule both tie best-fixed. The dominant lever is the menu, not the
+selector.}
+\label{tab:selection}
+\small
+\begin{tabular}{l ccc}
+\toprule
+Selector / fixed strategy & bal.\ acc & G-mean & MCC \\
+\midrule
+Oracle (per-dataset best, ceiling)        & 0.838 & 0.866 & 0.696 \\
+\midrule
+Learned selector --- classifier           & \textbf{0.833} & \textbf{0.862} & 0.677 \\
+Learned selector --- regressor            & 0.829 & 0.858 & 0.675 \\
+Imbalance-ratio-only selector             & 0.827 & 0.856 & 0.673 \\
+\midrule
+Best fixed strategy\,$^{a}$               & 0.827 & 0.855 & 0.680 \\
+Always-SMOTE                              & 0.795 & 0.827 & 0.678 \\
+Baseline (do nothing)                     & 0.772 & 0.805 & 0.670 \\
+\bottomrule
+\end{tabular}\\[2pt]
+{\footnotesize $^{a}$ Best fixed strategy is balanced RF for balanced accuracy and
+G-mean, cost-sensitive for MCC.}
+\end{table}

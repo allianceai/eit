@@ -1,0 +1,22 @@
+\section{Conclusion}\label{sec:conclusion}
+
+We introduced a remedy decomposition of the misclassified minority class --- sorting
+each error into \emph{threshold-recoverable}, \emph{data-reducible} (epistemic), or
+\emph{irreducible} (aleatoric) --- and used it to explain why class-imbalance
+correction so often reduces to a decision-threshold change. Across 79 real datasets
+the minority deficit is overwhelmingly threshold-recoverable (mean $69\%$, $74\%$ at
+imbalance ratio $>3$): the classifier already ranks these instances correctly and
+only the default cutoff is wrong. This accounts mechanistically for a documented but
+unexplained regularity --- that oversampling does not improve ranking and a threshold
+move reproduces its benefit without synthetic generation and with better calibration --- and
+recasts the long-observed accuracy/recall tradeoff as an operating-point effect:
+oversampling is an implicit, inefficient enactment of a threshold shift, which on
+controlled data we show it achieves by generating across the overlap boundary. Once
+every strategy is given the same out-of-fold threshold tuning, the large
+default-threshold gap between the families collapses to within $\pm1$\,pp across
+three base learners. The
+decomposition also says \emph{when} the threshold is not enough --- the small
+data-reducible fraction is where minority data genuinely helps, the irreducible
+fraction where no remedy in our menu does --- though a strong non-generative default is
+near-optimal in the threshold-recoverable majority. The practical message is simple:
+diagnose the deficit, and for most of it, move the decision rather than oversample.

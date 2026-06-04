@@ -1,0 +1,125 @@
+\section{Related Work}\label{sec:related}
+
+\paragraph{Instance categorization for imbalanced learning.}
+Several frameworks decompose training data by learning difficulty.
+Instance Hardness \cite{smith2014instance} assigns a difficulty score per
+instance from majority votes across multiple learners. Dataset Cartography
+\cite{swayamdipta2020dataset} maps instances by training-dynamics
+confidence/variability. Data-IQ \cite{seedat2022dataiq} extends this to
+tabular data via prediction trajectories. The closest line of work is
+Napiera{\l}a \& Stefanowski \cite{napierala2010learning,napierala2016types},
+who categorize minority instances into safe, borderline, rare, and outlier
+based on the proportion of same-class neighbours in a k-nearest-neighbour
+graph; S\'aez et al.\ \cite{saez2016analyzing} extend this to multi-class
+imbalanced data and analyze how oversampling interacts with each type. Crucially,
+all of these characterize instance \emph{difficulty}; none condition on the model
+being \emph{wrong} and ask \emph{which remedy applies}. Our decomposition differs
+in three ways: (i) it operates on the \emph{misclassified minority} and maps each
+error to a remedy --- move the threshold, add data, or accept it --- rather than
+scoring difficulty; (ii) it introduces a \emph{threshold-recoverable} class (the
+model already ranks the instance correctly and only the default cutoff is wrong),
+an axis absent from prior difficulty taxonomies; and (iii) it combines a
+model-based aleatoric--epistemic decomposition --- separating Bayes-rate ambiguity
+from sample-size limits, which k-NN typing cannot --- with a local class-ratio
+measure, used as a diagnostic rather than as a competing oversampler.
+
+\paragraph{Threshold-moving, cost-sensitivity, and the limits of resampling.}
+A long line of work argues the decision threshold, not the training distribution,
+is the right lever under imbalance. Provost \cite{provost2000imbalanced} warns
+against the default $0.5$ cutoff, and Elkan \cite{elkan2001foundations} shows that
+changing class proportions is \emph{equivalent} to changing the decision
+threshold/costs, so rebalancing barely alters the learned scoring function;
+Drummond and Holte \cite{drummond2003c45} reach the analogous conclusion via cost
+curves. Large-scale and clinical studies confirm the empirical consequence:
+resampling does not improve ranking/AUC and its apparent gains are reproduced by a
+threshold shift, while it degrades probability calibration
+\cite{elor2022smote,goorbergh2022harm,dalpozzolo2015calibrating,carriero2025harms}.
+We do \emph{not} claim these regularities as new --- we reproduce them across our
+roster and instead \emph{explain} them: our reducibility decomposition shows the
+misclassified minority is predominantly \emph{threshold-recoverable}, which is
+\emph{why} a threshold move suffices and oversampling behaves as an implicit,
+inefficient enactment of it. Our contribution is the per-instance instrument that
+accounts for this equivalence and locates its exceptions (the data-reducible and
+irreducible minority), not the equivalence itself.
+
+\paragraph{Class overlap and imbalance.}
+Santos et al.\ \cite{santos2023unifying} provide a unifying multi-view
+panorama of the relationship between class overlap and class imbalance,
+arguing that overlap is often the underlying driver of imbalance-related
+difficulty. Their framing supports our boundary-generation diagnosis: when
+SMOTE generates near class-overlap regions, the harm to accuracy is a
+predictable consequence of overlap-blind seeding.
+
+\paragraph{Characteristic-driven and complexity-guided selection.}
+Komorniczak, Ksieniewicz, and Wo{\'z}niak \cite{komorniczak2022data}
+demonstrate that data-complexity metrics correlate with the accuracy gain
+oversampling delivers, and Carvalho et al.\ \cite{carvalho2025resampling} survey
+how resampler performance tracks data structure. Most directly, Jiang and Ye
+\cite{jiang2026beyond} control the imbalance ratio and show data characteristics
+moderate oversampler choice --- yet their resulting selection rule does \emph{not}
+beat always-SMOTE, and they leave open whether a held-out, characteristic-driven
+selector can. This line is \emph{correlational}: it relates measured complexity to
+observed performance without explaining the mechanism. Our contribution is
+orthogonal --- a mechanism-level account of \emph{why} boundary generation hurts --- and we
+answer the open selection question directly, on a full strategy menu with held-out
+validation (\S\ref{sec:results:selection}), finding that the menu, not the
+selector, is the dominant lever. Our account is mechanism-level and
+intervention-supported rather than correlational.
+
+\paragraph{SMOTE variants and cleaning.}
+Borderline-SMOTE \cite{han2005borderline} restricts generation to instances
+near the decision boundary; ADASYN \cite{he2008adasyn} upweights generation
+in sparse minority regions. Both methods \emph{increase} generation in
+exactly the regions we identify as harmful. Safe-Level-SMOTE
+\cite{bunkhumpornpat2009safe} uses each seed's ``safe level'' (count of
+same-class neighbours) to gate interpolation, an idea closely related to
+ours but instantiated via k-NN heuristics rather than uncertainty
+decomposition; we compare directly in \S\ref{sec:results}.
+Post-hoc cleaning methods combine SMOTE with instance removal: SMOTE+ENN
+\cite{batista2004study,wilson1972asymptotic} removes instances misclassified
+by edited nearest neighbours, while SMOTE+Tomek
+\cite{batista2004study,tomek1976two} removes Tomek-link pairs. These methods
+are agnostic to \emph{why} an instance is problematic, removing both
+correctable and boundary instances indiscriminately. Beyond the canonical
+family, MWMOTE \cite{barua2014mwmote}, ProWSyn \cite{barua2011prowsyn}, and
+polynomial-fitting SMOTE \cite{gazzah2008new} represent more recent
+extensions. The 85-variant survey of Kov\'acs \cite{kovacs2019smote}
+provides a broader perspective; we include the top three of his ranked
+variants as baselines. Theoretically, Sakho et al.\ \cite{sakho2024rebalancing}
+show that \emph{default} SMOTE asymptotically copies minority points and that its
+synthetic density \emph{vanishes} near the boundary of the minority support; our
+boundary-crossing account is therefore specific to the \emph{overlap} regime ---
+interpolation between minority seeds that already lie in class-overlap territory,
+where the segment crosses into majority-posterior space
+(Proposition~\ref{prop:cross}) --- and is complementary to, not in conflict with, their
+clean-margin analysis.
+
+\paragraph{Label noise detection.}
+Confident Learning \cite{northcutt2021confident} estimates the joint
+distribution of noisy and true labels to identify mislabeled instances. Our
+Cat\,1 (noise) category captures a similar signal but is embedded in a
+broader three-way decomposition that distinguishes noise from boundary
+ambiguity --- a distinction Confident Learning does not make.
+
+\paragraph{Uncertainty decomposition.}
+Shaker and H\"ullermeier \cite{shaker2020aleatoric} decompose random-forest
+predictive uncertainty into aleatoric and epistemic components via
+ensemble-of-trees disagreement. H\"ullermeier and Waegeman
+\cite{hullermeier2021aleatoric} provide a general treatment of the
+aleatoric--epistemic distinction, and Nguyen et al.\
+\cite{nguyen2019epistemic} use it for data acquisition --- epistemic uncertainty
+marks the \emph{reducible} part an extra label can resolve, aleatoric the
+irreducible part --- in an active-learning setting. We adapt this
+reducible-versus-irreducible logic to imbalanced learning: combined with a local
+class-ratio measure and a threshold-recoverability test, it yields the
+remedy-mapped decomposition of the misclassified minority that is our headline
+contribution.
+
+\paragraph{Recent reviews.}
+Fern\'andez et al.\ \cite{fernandez2018smote} mark the 15-year anniversary
+of SMOTE with a progress-and-challenges review. Carvalho et al.\
+\cite{carvalho2025resampling} survey resampling approaches from a data
+perspective; their review reinforces the observation that resampler
+performance is best predicted by data structure rather than by the
+algorithmic family of the resampler --- a perspective consistent with our
+exclusion-beats-targeting finding.

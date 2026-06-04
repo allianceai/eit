@@ -1,0 +1,39 @@
+\begin{table}[t]
+\centering
+\caption{Per-strategy mean accuracy / balanced accuracy across the 16-strategy
+menu (XGBoost base learner; KEEL, $n{=}27$; OpenML, $n{=}52$), sorted by mean
+balanced accuracy. \emph{At the default decision threshold}, non-generative
+strategies ($\dagger$) occupy the top of the balanced-accuracy ranking on both
+rosters and the entire SMOTE family sits below them --- but this ranking gap is
+largely an operating-point effect that collapses once every strategy receives the
+same out-of-fold threshold tuning (Table~\ref{tab:parity}). Threshold-moving and
+balanced ensembles recover the minority by changing the \emph{decision}, not by
+generating synthetic data. Entries are means over the $25$ folds; the significance
+of the per-dataset default-threshold advantage (paired Wilcoxon $p<10^{-10}$,
+bootstrap $95\%$ CIs) is reported in the text of \S\ref{sec:results:frontier}.}
+\label{tab:frontier}
+\small
+\begin{tabular}{l c cc cc}
+\toprule
+ & & \multicolumn{2}{c}{KEEL} & \multicolumn{2}{c}{OpenML} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}
+Strategy & type & acc & bacc & acc & bacc \\
+\midrule
+threshold-moving        & $\dagger$ & 0.863 & \textbf{0.856} & 0.854 & \textbf{0.858} \\
+balanced RF             & $\dagger$ & 0.910 & \textbf{0.855} & 0.812 & 0.812 \\
+EasyEnsemble            & $\dagger$ & 0.847 & \textbf{0.854} & 0.815 & \textbf{0.822} \\
+cost-sensitive          & $\dagger$ & 0.958 & 0.802 & 0.849 & 0.793 \\
+SMOTE                   &           & 0.961 & 0.800 & 0.851 & 0.793 \\
+Safe-Level-SMOTE        &           & 0.948 & 0.806 & 0.848 & 0.790 \\
+ADASYN                  &           & 0.960 & 0.801 & 0.851 & 0.791 \\
+Borderline-SMOTE        &           & 0.961 & 0.795 & 0.851 & 0.791 \\
+ProWSyn                 &           & 0.961 & 0.800 & 0.853 & 0.787 \\
+MWMOTE                  &           & 0.960 & 0.795 & 0.852 & 0.786 \\
+Napierala-guided SMOTE  &           & 0.964 & 0.783 & 0.851 & 0.789 \\
+clean-masked SMOTE      &           & 0.964 & 0.779 & 0.852 & 0.786 \\
+polynom-fit SMOTE       &           & 0.966 & 0.766 & 0.854 & 0.780 \\
+triage weighting        & $\dagger$ & 0.967 & 0.761 & 0.854 & 0.778 \\
+baseline (do nothing)   & $\dagger$ & 0.967 & 0.761 & 0.854 & 0.777 \\
+\bottomrule
+\end{tabular}
+\end{table}

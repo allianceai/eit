@@ -1,0 +1,126 @@
+\section{Introduction}\label{sec:intro}
+
+Class imbalance is a persistent challenge in machine learning. In production
+settings the cost of the resulting performance degradation is not abstract: in
+medical screening at 10\% prevalence, a one-percentage-point drop in specificity
+at fixed sensitivity multiplies the false-positive volume that clinicians must
+reconcile, and in fraud detection it directly inflates the analyst caseload that
+determines operational feasibility. When one class dominates the training
+distribution, classifiers tend to optimize for majority-class accuracy at the
+expense of minority-class recall \cite{he2009learning}. SMOTE
+\cite{chawla2002smote}, which generates synthetic minority instances by
+interpolating between existing samples and their nearest neighbours, remains the
+dominant solution after two decades and has spawned hundreds of variants
+\cite{fernandez2018smote,kovacs2019smote}. Yet a stubborn regularity persists:
+SMOTE variants almost invariably degrade majority-class accuracy while improving
+minority-class recall. This accuracy--balanced-accuracy tradeoff is so common
+that practitioners treat it as inherent to oversampling.
+
+A natural response is to ask \emph{which} resampling method a given dataset
+needs. Recent work shows that data characteristics --- not the imbalance ratio
+alone --- moderate oversampling effectiveness \cite{jiang2026beyond}, and a line
+of meta-learning research recommends a resampler from dataset meta-features
+\cite{carvalho2025resampling}. These efforts are
+\emph{correlational}: they relate measured complexity to observed performance,
+but do not explain \emph{why} a method helps, and their selection rules barely
+beat the trivial ``always SMOTE'' baseline (e.g.\ \cite{jiang2026beyond} reports
+its rule \emph{below} always-SMOTE). What is missing is a \emph{mechanistic} account
+of the tradeoff that tells us which lever to pull.
+
+We provide one. We argue the tradeoff is \emph{not} inherent to oversampling but
+is a mechanistic consequence of \emph{where} SMOTE generates synthetic data.
+Standard SMOTE uses every minority instance as an interpolation seed, including
+those in regions of genuine class overlap near the decision boundary. Generating
+there pushes the learned boundary into majority-class territory, recovering some
+minority instances while misclassifying previously correct majority ones. We
+establish this in two steps. On controlled Gaussian mixtures with a \emph{known}
+Bayes boundary, standard SMOTE demonstrably places synthetic points \emph{across}
+that boundary. On real data, where the boundary is unobserved, a controlled
+interventional experiment manipulates \emph{where} synthetic points are generated:
+augmenting \emph{only} the model-estimated boundary (irreducible) errors reproduces
+the full SMOTE signature (balanced accuracy $p<0.001$, negative accuracy trend),
+whereas augmenting non-boundary or random instances has no such effect. The
+evidence indicates that much of the cost traces to \emph{where} synthetic data is
+placed, rather than to rebalancing per se.
+
+To localize this boundary/overlap region on real data we introduce \textbf{Error
+Instance Triage}, which categorizes each misclassified training instance from
+\emph{out-of-bag} random-forest predictions via an aleatoric--epistemic
+uncertainty decomposition \cite{shaker2020aleatoric,hullermeier2021aleatoric}:
+
+\begin{enumerate}
+\item \textbf{Cat\,1 (Noise):} likely mislabeled instances --- high total but
+  low aleatoric uncertainty; the label conflicts with the feature pattern.
+\item \textbf{Cat\,2 (Data-limited):} errors in regions lacking same-class
+  evidence --- high epistemic uncertainty, low local class density. These are
+  \emph{reducible}: more correct-class data would resolve them.
+\item \textbf{Cat\,3 (Irreducible):} errors in estimated boundary/overlap regions
+  where classes overlap --- high aleatoric uncertainty. These are \emph{not}
+  reducible by adding data.
+\end{enumerate}
+
+The decomposition yields a diagnostic, not a new oversampler. On real imbalanced
+data the misclassified minority concentrates in these estimated boundary/overlap
+regions (Cat\,3 is $\sim$85\% of errors, a fraction that is stable under strict
+out-of-fold re-estimation) --- exactly where SMOTE's harm originates. Yet that
+balanced-accuracy deficit turns out to be largely a \emph{decision-threshold
+artefact}: moving the decision threshold alone --- a non-generative change ---
+recovers roughly nine percentage points of balanced accuracy over the default
+threshold (\S\ref{sec:results:frontier}), without any synthetic generation. The practical implication is that the lever is
+the \emph{decision rule}, not synthetic generation --- and indeed non-generative
+strategies (threshold-moving, cost-sensitive learning, balanced ensembles)
+capture the recoverable balanced accuracy \emph{without} the boundary-generation
+accuracy cost.
+
+We make this precise with a \emph{remedy decomposition} of the misclassified
+minority --- sorting each error into threshold-recoverable, data-reducible
+(epistemic), or irreducible (aleatoric) --- and find the deficit is overwhelmingly
+\textbf{threshold-recoverable} (mean $69\%$ across 79 datasets, $74\%$ at
+$\mathrm{IR}>3$): the classifier already ranks these instances correctly. The known
+``move the threshold'' equivalence
+\cite{provost2000imbalanced,elkan2001foundations,elor2022smote,goorbergh2022harm}
+is the consequence: across a 16-strategy menu oversampling yields no ranking gain
+and worse calibration, and once \emph{every} strategy is given the same
+out-of-fold threshold tuning the large default-threshold gap between the families
+collapses to within $\pm1$\,pp across three base learners.
+We turn the diagnosis into a prescription with a regime map and an
+honestly-scoped selector --- which beats the always-SMOTE / imbalance-ratio
+paradigm, but only because the menu now includes the dominant non-generative
+strategies, while a strong non-generative default is itself near-optimal.
+
+\paragraph{Contributions.}
+\begin{enumerate}
+\item \textbf{A remedy decomposition of the minority deficit (headline).} We
+  decompose the \emph{misclassified} minority into the remedy that would fix each
+  error --- \emph{threshold-recoverable}, \emph{data-reducible} (epistemic), or
+  \emph{irreducible} (aleatoric) --- by combining an aleatoric--epistemic
+  uncertainty decomposition with a threshold-recoverability test. Unlike prior
+  instance taxonomies, which score \emph{difficulty}
+  \cite{napierala2016types,smith2014instance,swayamdipta2020dataset,seedat2022dataiq},
+  ours conditions on the model being wrong and introduces the threshold-recoverable
+  axis. Empirically the deficit is overwhelmingly threshold-recoverable
+  ($69\%$ on average, $74\%$ at $\mathrm{IR}>3$).
+\item \textbf{A mechanism behind the ``move the threshold'' equivalence.} The
+  decomposition \emph{explains} a known regularity --- that resampling does not
+  improve ranking and a threshold shift reproduces its benefit
+  \cite{provost2000imbalanced,elkan2001foundations,elor2022smote,goorbergh2022harm}
+  --- by showing the deficit is mostly a thresholding artefact, so oversampling is
+  an implicit, inefficient enactment of a threshold move. We give the geometric
+  mechanism: on controlled mixtures with a \emph{known} boundary, SMOTE generates
+  across it, and a short proposition (\S\ref{sec:method:theory}) shows why
+  interpolating boundary seeds crosses into the majority-posterior region.
+\item \textbf{Evidence at scale (confirmation, not claim).} Across 79 datasets and
+  a 16-strategy menu we reproduce, on a broad roster, that oversampling yields no
+  discrimination gain (AUC unchanged) and is worse-calibrated, and that once
+  \emph{every} strategy receives the same out-of-fold threshold tuning, the
+  $+5.76$\,pp default-threshold gap between the families collapses to within
+  $\pm1$\,pp across three base learners --- the apparent dominance of non-generative
+  methods at the default threshold is an operating-point effect. We frame these as confirmation of
+  \cite{elor2022smote,goorbergh2022harm,dalpozzolo2015calibrating} at scale.
+\item \textbf{An honestly-scoped prescription.} The decomposition says which remedy
+  applies; we add a regime map and, as a secondary analysis, a held-out selector
+  that beats always-SMOTE by $3.5$ points --- but an imbalance-ratio-only rule
+  matches it and a strong non-generative default is near-optimal, so the
+  \emph{menu}, not selector sophistication, is the lever (the practical answer to
+  the selection problem left open by \cite{jiang2026beyond}).
+\end{enumerate}
