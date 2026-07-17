@@ -3,8 +3,9 @@
 We proceed from validating the triage, to the headline remedy decomposition (the
 deficit is mostly threshold-recoverable), to the mechanism (controlled overlap and
 a proposition), to its consequence at scale (oversampling is an operating-point
-move: no ranking gain, worse calibration, and a tie with threshold-moving at
-parity), and finally to the prescription (a regime map and an honestly-scoped
+move: no ranking gain, a prior shift in probability space rather than a
+calibration change, and a tie with threshold-moving at parity), and finally to
+the prescription (a regime map and an honestly-scoped
 selector).
 
 \subsection{Error Instance Triage: validation}\label{sec:results:validation}
@@ -13,7 +14,7 @@ selector).
 behaves as designed. As class separation shrinks from $1.2$ to $0.2$ standard
 deviations (overlap grows), the Cat\,3 (irreducible) fraction among errors rises
 monotonically, exceeding $95\%$ at the smallest separation (mean $94.3\%$ across
-the sweep) --- the triage correctly attributes boundary-overlap errors to
+the sweep). The triage correctly attributes boundary-overlap errors to
 irreducibility. On 24 real datasets with $5\%$ injected label noise the triage
 detects the flips with mean precision $0.77$, and the flagged-noise fraction rises
 significantly ($p=2\times10^{-5}$, Wilcoxon). The triage is thus sensitive to both
@@ -23,14 +24,14 @@ the mechanism below.
 \paragraph{Out-of-fold robustness.} Because the categories underpin the mechanistic
 argument, we verify they are not in-sample artefacts. The category assignment
 already uses out-of-bag predictions (\S\ref{sec:method:uncert}); under a strict
-inner cross-validation that re-derives \emph{every} signal --- including the
-aleatoric/epistemic decomposition --- on held-out instances, the Cat\,3 fraction
+inner cross-validation that re-derives \emph{every} signal (including the
+aleatoric/epistemic decomposition) on held-out instances, the Cat\,3 fraction
 among errors is essentially unchanged (in-sample $\to$ out-of-fold mean shift of
 $\approx\!\OOFCATSHIFT$\,pp over 79 datasets) and the aleatoric/epistemic ordering
 that defines the categories is preserved (\appref{app:oof}).
 
-\paragraph{Is the triage a uniquely good predictor of SMOTE harm? No --- and it
-need not be.} A reviewer will rightly ask whether the aleatoric--epistemic triage
+\paragraph{Is the triage a uniquely good predictor of SMOTE harm? No, and it
+need not be.} It is reasonable to ask whether the aleatoric--epistemic triage
 is necessary or whether a simpler $k$-NN hardness / overlap score localizes
 SMOTE's harm equally well. Across the 75 datasets with a SMOTE outcome we correlate
 eleven per-dataset measures with SMOTE's accuracy cost (Table~\ref{tab:ablation}).
@@ -42,15 +43,15 @@ $p=0.07$). The \emph{conditional} Cat\,3 fraction (\texttt{frac\_cat3}) even
 correlates with \emph{less} accuracy harm ($\rho=+0.37$): the fraction of errors
 that are boundary errors is not the dataset-level \emph{mass} of boundary-entangled
 minority, and a dataset can carry a high Cat\,3 share within a \emph{small} error
-population --- a near-ceiling problem SMOTE barely perturbs. The mechanism is tied
+population, a near-ceiling problem SMOTE barely perturbs. The mechanism is tied
 to that boundary mass (better captured by the minority error rate), not the
 conditional fraction alone. We state this plainly: the triage is \emph{not} a better
 cross-dataset forecaster of SMOTE harm than simple measures, and we do not claim it
 is. Its role
-is \emph{explanatory} --- it localizes \emph{which} errors lie in the
+is \emph{explanatory} (it localizes \emph{which} errors lie in the
 boundary/overlap region so the intervention of
 \S\ref{sec:results:interventional} can seed augmentation there and probe the
-mechanism --- not a predictive instrument, consistent with the honest selection
+mechanism), not a predictive instrument, consistent with the honest selection
 finding of \S\ref{sec:results:selection}. Put differently, the minority error rate
 predicts the \emph{size} of the deficit; the remedy decomposition diagnoses the
 \emph{appropriate intervention}.
@@ -74,16 +75,20 @@ to the misclassified minority on every dataset (Table~\ref{tab:reducibility}).
 Across the 70 datasets with a non-trivial minority error set, the deficit is
 \textbf{predominantly threshold-recoverable}: a mean of $\mathbf{69\%}$ (median
 $75\%$) of minority errors are corrected simply by moving the decision threshold to
-its out-of-fold balanced-accuracy optimum --- the model already \emph{ranked} these
-instances correctly. Only $7\%$ are data-reducible (epistemic --- where more
-same-class data would help), $16\%$ are irreducible (aleatoric --- model-estimated
+its out-of-fold balanced-accuracy optimum: the model already \emph{ranked} these
+instances correctly. Only $7\%$ are data-reducible (epistemic, where more
+same-class data would help), $16\%$ are irreducible (aleatoric, model-estimated
 overlap), and $7\%$ are noise. The pattern \emph{sharpens} with imbalance: on
 $\mathrm{IR}>3$ datasets $74\%$ of the deficit is threshold-recoverable. This is
 corroborated independently by separability: on the 30 hardest binary datasets
 (baseline balanced accuracy $<0.85$) the baseline classifier's out-of-fold AUC is a
-median of $0.91$ ($93\%$ exceed $0.70$) --- the classes are well ranked even where
+median of $0.91$ ($93\%$ exceed $0.70$). The classes are well ranked even where
 default-threshold balanced accuracy is poor. (The genuine exceptions, AUC
-$\approx0.59$, are the near-irreducible problems.)
+$\approx0.59$, are the near-irreducible problems.) The result is also not an
+artefact of the random-forest instrument: re-deriving the full decomposition
+with bagged MLP and bagged logistic-regression ensembles leaves the
+threshold-recoverable share at $69\%$ and $68\%$ respectively ($77\%$ at
+$\mathrm{IR}>3$ for both; \appref{app:nontree}).
 
 \paragraph{Consistency with Cat\,3 dominating the errors.} The $\sim$85\% Cat\,3
 share reported below (\S\ref{sec:results:interventional}) and the $16\%$ irreducible
@@ -93,7 +98,7 @@ rule, computed over \emph{all} errors; the remedy decomposition then asks, for t
 \emph{minority} errors only, whether that default-threshold mistake survives a move
 to the tuned operating point $\tau^\star$. Because the classifier ranks most of
 these boundary errors above $\tau^\star$, they are counted threshold-recoverable,
-and only the residue the threshold move cannot rescue is counted irreducible --- a
+and only the residue the threshold move cannot rescue is counted irreducible, a
 strict subset of the minority Cat\,3 errors, not the whole category.
 
 \begin{table}[t]
@@ -108,12 +113,12 @@ predominantly a thresholding artefact, increasingly so with imbalance.}
 \end{table}
 
 \paragraph{Why this matters.} This decomposition is the mechanistic account of a
-well-documented but unexplained regularity --- that resampling does not improve
+well-documented but unexplained regularity, that resampling does not improve
 ranking and a threshold move reproduces its benefit
 \cite{provost2000imbalanced,elkan2001foundations,elor2022smote,goorbergh2022harm}.
 \emph{Because} most of the minority deficit is threshold-recoverable, a
-non-generative change of the decision rule recovers it, and oversampling --- which
-leaves ranking unchanged (\S\ref{sec:results:frontier}) --- is at best an implicit,
+non-generative change of the decision rule recovers it, and SMOTE, which
+leaves ranking unchanged (\S\ref{sec:results:frontier}), is at best an implicit,
 inefficient way to enact the same threshold move. The decomposition also tells a
 practitioner \emph{which} situation they are in: the (minority) data-reducible
 fraction is where collecting or generating minority data is warranted; the
@@ -124,16 +129,36 @@ irreducible fraction is where no remedy in our evaluated menu helps.
 \paragraph{Premise.} If SMOTE's accuracy cost arises from generation near the
 Bayes boundary, then on a controlled problem with a \emph{known} boundary,
 standard SMOTE should place synthetic minority points \emph{across} that boundary
---- in majority territory, where they act as label noise --- increasingly so as
+(in majority territory, where they act as label noise), increasingly so as
 overlap grows, while excluding the irreducible seeds should prevent it.
 
 \paragraph{Result.} We generate 2D Gaussian classes
 ($\mathcal{N}([\pm s,0], I)$, $9{:}1$ imbalance, balanced Bayes boundary
 $x=0$) and sweep the separation $s$. Standard SMOTE places an
 \emph{overlap-dependent} fraction of its synthetic minority points on the
-majority side of the boundary --- from $6\%$ at $s=1.5$ to $34\%$ at $s=0.4$ ---
+majority side of the boundary (from $6\%$ at $s=1.5$ to $34\%$ at $s=0.4$),
 whereas masking the Cat\,3 (boundary) seeds generates essentially none
 ($\le 2\%$, $0\%$ for $s\ge0.8$); Figure~\ref{fig:overlap} visualizes both.
+
+\paragraph{Boundary-targeting and geometric variants.} The same measurement
+answers whether the mechanism is specific to SMOTE's linear interpolation. As
+Proposition~\ref{prop:cross}(iii) predicts, the boundary-targeting variants
+cross \emph{more}: ADASYN places the largest wrong-side fraction at every
+separation ($24$--$37\%$, still $24\%$ at the widest separation, because its
+sparse-seed weighting concentrates on the overlap stragglers), with
+Borderline-SMOTE between it and SMOTE at wide separations. Geometric SMOTE
+\cite{douzas2019geometric} is the instructive case. Its hypersphere is
+bounded by the nearest \emph{majority} neighbour, a design-level guard against
+generating in the other class's territory, and we expected it to cross less.
+It does not: its wrong-side fraction matches standard SMOTE's at every
+separation ($34\%$ vs $34\%$ at $s{=}0.4$; $8\%$ vs $6\%$ at $s{=}1.5$). The
+guard bounds how far generation extends \emph{past} the nearest majority
+point, but a seed that already lies in the overlap region is already across
+the boundary, so any point generated around it carries a minority label in
+majority-posterior territory, exactly clause~(i) of the proposition. What
+drives the harmful mass is \emph{where the seeds sit}, not the geometry of the
+interpolation, which is why seed exclusion (clean-masking) is the only
+intervention that removes the crossing.
 
 \begin{figure}[t]
 \centering
@@ -143,7 +168,9 @@ $x=0$, green). Left/middle: at moderate overlap ($s=0.6$) standard SMOTE scatter
 synthetic minority points (red $\times$) across the boundary into majority
 territory; masking the boundary seeds keeps generation on the minority side.
 Right: the fraction of synthetic points crossing the boundary rises with overlap
-for SMOTE but stays near zero when boundary seeds are excluded.}
+for SMOTE, for the boundary-targeting variants (ADASYN highest at every
+separation), and for the geometrically guarded G-SMOTE, whose curve matches
+standard SMOTE's; it stays near zero only when boundary seeds are excluded.}
 \label{fig:overlap}
 \end{figure}
 
@@ -156,7 +183,7 @@ random-instance generation should not.
 
 \paragraph{Protocol.} On each training fold we compute the triage and, for each
 strategy, append a \emph{fixed} budget $B$ of synthetic points equal to the total
-number of triage errors on that fold --- identical across strategies, so the
+number of triage errors on that fold, identical across strategies, so the
 comparison isolates \emph{where} one generates, not how much. Synthetic points are
 produced by SMOTE-style interpolation \emph{within the targeted seed subset only}
 (each synthetic point takes its seed's own class, with $B$ split across classes in
@@ -164,13 +191,13 @@ proportion to the seed subset's class distribution); all original training insta
 are kept, and the data are \emph{not} rebalanced to a fixed ratio. The six
 strategies are: \texttt{augment\_cat2} and \texttt{augment\_cat3} (seeds from the
 respective error category), \texttt{augment\_all\_errors} (all errors),
-\texttt{augment\_random} (a size-$B$ random sample of \emph{all} training instances
---- class-proportional, hence a true null that cannot shift the class balance), and
+\texttt{augment\_random} (a size-$B$ random sample of \emph{all} training instances,
+class-proportional, hence a true null that cannot shift the class balance), and
 two removal controls (\texttt{remove\_noise}, \texttt{remove\_random}). The base
 learner is XGBoost; metrics are over $5\times5$ folds. Seeds come from the triage on
 the training fold. This real-data intervention is a \emph{small} effect and, as we
 report honestly, sensitive to seed re-estimation (\appref{app:oof}); we treat
-it as corroboration of, not primary evidence for, the mechanism --- which rests on
+it as corroboration of, not primary evidence for, the mechanism, which rests on
 the controlled experiment (\S\ref{sec:results:mechanism}, known boundary) and the
 discrimination/threshold analysis (\S\ref{sec:results:frontier}).
 
@@ -188,8 +215,8 @@ $p>0.5$), and augmenting Cat\,2 errors helps balanced accuracy modestly
 \includegraphics[width=\linewidth]{figures/fig1_interventional.pdf}
 \caption{Interventional validation: mean metric change vs.\ the no-augmentation
 baseline by augmentation target (50 datasets, fixed budget). Cat\,3
-(boundary) augmentation reproduces the SMOTE signature --- balanced-accuracy gain
-at an accuracy cost --- while random augmentation is null.}
+(boundary) augmentation reproduces the SMOTE signature (balanced-accuracy gain
+at an accuracy cost), while random augmentation is null.}
 \label{fig:interventional}
 \end{figure}
 
@@ -205,7 +232,7 @@ discrimination/threshold analysis of \S\ref{sec:results:frontier} (oversampling
 does not improve ranking; its gain is a recoverable operating-point shift) are the
 load-bearing evidence.
 
-\subsection{Oversampling is an operating-point move, not a discrimination gain}\label{sec:results:frontier}
+\subsection{SMOTE-family oversampling is an operating-point move, not a discrimination gain}\label{sec:results:frontier}
 
 We now confirm the consequence the decomposition predicts, on the full menu and at
 scale. The results in this section reproduce known findings
@@ -213,14 +240,28 @@ scale. The results in this section reproduce known findings
 on a broad roster; we present them as confirmation that grounds the mechanism, not
 as new claims.
 
-\paragraph{No discrimination gain; worse calibration.} Oversampling does not help
-the classifier \emph{rank}: on the binary datasets, SMOTE's out-of-fold ROC-AUC
+\paragraph{No discrimination gain; a prior shift, not a calibration gain.} The
+SMOTE family does not
+help the classifier \emph{rank}: on the binary datasets, SMOTE's out-of-fold ROC-AUC
 ($0.911$) and PR-AUC (at fixed test prevalence, $0.653$) are statistically
-indistinguishable from the unresampled baseline ($0.909$, $0.655$), while its
-probability calibration is worse (Brier $0.031$ vs.\ $0.028$; expected calibration
-error $0.030$ vs.\ $0.025$), with Safe-Level-SMOTE worst (Table~\ref{tab:metrics}).
-This matches the established account that resampling leaves ranking intact and
-shifts only the threshold-dependent operating point, at a calibration cost
+indistinguishable from the unresampled baseline ($0.909$, $0.655$), and the same
+holds for G-SMOTE ($0.908$, $0.649$; Table~\ref{tab:metrics}). In rank terms
+across the seven same-learner strategies, the ROC-AUC ranks sit in an
+indistinguishable $3.2$--$4.9$ band and the baseline attains the best PR-AUC
+rank ($3.4$). What oversampling \emph{does} change is the probability scale, and
+here the verdict is metric-relative, exactly as the critical literature
+observes (\S\ref{sec:related}): on classical, prevalence-weighted calibration
+metrics the unresampled baseline is best (Brier $0.028$ vs.\ SMOTE's $0.031$;
+ECE $0.025$ vs.\ $0.030$; best average Brier rank $2.6$ of $7$, Safe-Level-SMOTE
+worst at $6.0$), whereas on \emph{class-balanced} versions of the same metrics
+(mean of per-class Brier terms; inverse-class-frequency-weighted ECE) the
+ordering \emph{reverses} (balanced Brier: baseline $0.205$, SMOTE $0.169$,
+Safe-Level $0.160$), because oversampling inflates the minority-side
+probabilities that the baseline leaves under-confident. Both verdicts describe
+the same event: resampling shifts the effective class prior in probability
+space. That is a \emph{prior shift}, not a calibration improvement --- it can be
+reproduced without data generation by reweighting or by moving the threshold
+(Table~\ref{tab:parity}), and undone by post-hoc recalibration
 \cite{dalpozzolo2015calibrating,goorbergh2022harm,carriero2025harms}. Whatever
 balanced-accuracy SMOTE buys is therefore an operating-point move, not a better
 classifier.
@@ -232,29 +273,97 @@ ranking on both rosters (best non-gen $\ge$ best gen on balanced accuracy in
 $25/27$ KEEL datasets, $+5.76$\,pp, $95\%$ CI $[+3.81,+7.90]$; $43/52$ OpenML,
 $+2.02$\,pp, $[+1.20,+2.98]$; $86\%$ overall; Friedman--Nemenyi
 Figure~\ref{fig:cd}, $\chi^2{=}285.6$, $p<10^{-50}$, threshold-moving best rank
-$3.15$) --- but only because threshold-moving is tuned and the SMOTE family is
+$3.15$), but only because threshold-moving is tuned and the SMOTE family is
 scored at $0.5$. When \emph{every} strategy receives the same out-of-fold
 threshold tuning, almost the entire gap disappears: on the 27 KEEL binary datasets
-a tuned threshold alone lifts SMOTE's balanced accuracy by $+6.4$\,pp, and the
+a tuned threshold alone lifts SMOTE's balanced accuracy by $+6.4$\,pp (G-SMOTE's
+by $+8.1$\,pp), and the
 best-non-generative\,$-$\,best-generative difference collapses from $+5.76$\,pp at
-the default threshold to within $\pm1$\,pp at parity (Table~\ref{tab:parity}:
-$-0.72$\,pp for XGBoost, $-0.49$ for RF, $+0.19$ for logistic regression). We are
-precise about the residual: at parity the best \emph{generative} strategy is in
-fact marginally \emph{ahead} on XGBoost ($0.72$\,pp, $p{=}0.003$) and RF
-($p{=}0.06$), and tied on logistic regression --- but this sub-$1$\,pp edge comes
-with \emph{no} ranking gain and \emph{worse} calibration (above), against a
-$+6.4$\,pp threshold effect. The decisive lever is therefore the \emph{threshold},
+the default threshold to within $\pm1$\,pp at parity on the three main learners
+(Table~\ref{tab:parity}:
+$-0.99$\,pp for XGBoost, $-0.80$ for RF, $-0.44$ for logistic regression). We are
+precise about the residual: at parity the best \emph{generative} strategy is
+marginally \emph{ahead} on XGBoost ($p{=}10^{-4}$) and RF ($p{=}4\times10^{-4}$),
+and not significant by the signed-rank test on logistic regression ($p{=}0.09$;
+the bootstrap CI on the mean, $[-0.93,-0.04]$, marginally excludes zero) or SVM
+($-0.10$\,pp, $p{=}0.4$); part of this residual is a selection asymmetry (the generative family
+takes a maximum over five members, the non-generative over four or fewer). The
+sub-$1$\,pp edge comes
+with \emph{no} ranking gain and a prior shift rather than a calibration gain
+(above), against a
+$+6.4$\,pp threshold effect. G-SMOTE at parity is indistinguishable from plain
+threshold-moving ($-0.08$\,pp, $p{=}0.79$) and from tuned SMOTE ($p{=}0.93$).
+The decisive lever is therefore the \emph{threshold},
 not the generative/non-generative choice, which is a fraction of its size. This
-corroborates, on a 16-strategy menu and three learners, the broader-roster
+corroborates, on a 16-strategy menu, the broader-roster
 conclusion of \cite{elor2022smote} (73 datasets) and \cite{goorbergh2022harm} that
-balancing and threshold-tuning yield equivalent discrimination.
+balancing and threshold-tuning yield equivalent discrimination. Average ranks
+tell the same story: at the default threshold the do-nothing baseline ranks
+last or next-to-last of the seven same-learner strategies on every learner
+(mean balanced-accuracy rank
+$6.6$, $5.9$, $6.9$ of $7$ for XGBoost, RF, and logistic regression), whereas
+once every strategy is threshold-tuned the ranks compress into a narrow band
+($2.9$--$5.4$, $3.6$--$4.5$, $3.0$--$5.2$ respectively), with the tuned baseline
+ranked \emph{first} on logistic regression.
+
+\paragraph{Where the operating-point account ends: undertrained neural
+learners.} Extending the parity analysis to three further learners
+(Table~\ref{tab:parity}) locates the boundary of this account. Gaussian naive
+Bayes behaves like the linear case (generative edge $-1.63$\,pp) and RBF-SVM
+like the tree case ($-0.10$\,pp, $p{=}0.4$). The multilayer perceptron is the
+qualitative exception: at parity the generative family leads by $11$\,pp, and
+the reason is visible in the ranking metrics, which the operating-point account
+requires to be intact. A single early-stopped MLP trained on the imbalanced data
+\emph{ranks poorly} (mean ROC-AUC $0.769$), and SMOTE-family resampling
+genuinely repairs it (AUC $0.892$, $+0.123$, $p{=}4\times10^{-7}$, $93\%$ of
+datasets): for this learner, imbalance corrupts the learned representation
+itself, so resampling is \emph{not} reducible to a threshold move. (The
+comparison also carries a structural caveat: MLPClassifier supports no class
+weighting, so the non-generative family on this axis is threshold-moving alone.)
+Notably, \emph{bagging} MLPs restores the ranking --- the bagged-MLP instrument
+of \appref{app:nontree} reproduces the $69\%$ threshold-recoverable share ---
+so the exception is specific to single undertrained networks. This is exactly
+the regime our deep-learning discussion (\S\ref{sec:discussion}) anticipates,
+and we state the scope plainly: the operating-point account holds where the
+classifier's ranking survives imbalance (trees, linear models, naive Bayes,
+kernel SVMs, bagged ensembles); for single neural networks resampling has
+genuine representation value beyond the threshold.
+
+\paragraph{Weighted learning is the same lever.} A natural objection is that
+class-weighted (cost-sensitive) learning should make both oversampling and
+explicit threshold-moving unnecessary. Elkan's equivalence
+\cite{elkan2001foundations} says the three are one lever: reweighting classes,
+changing class priors by resampling, and moving the decision threshold all shift
+the same operating point. Our menu contains class-balanced weighting (family
+(iii), \S\ref{sec:method:menu}), and the parity data bear the equivalence out,
+with an instructive learner-dependence in how \emph{completely} weighting enacts
+the shift. For logistic regression, weighting alone is the full move: it gains
+$+12.1$\,pp balanced accuracy over the default-threshold baseline, matches
+default-threshold SMOTE ($+0.25$\,pp, $p{=}0.16$), and subsequent threshold
+tuning adds essentially nothing ($+0.5$\,pp, $p{=}0.68$). For XGBoost the
+enactment is partial (weighting $+4.0$\,pp, with threshold tuning adding a
+further $+5.6$\,pp, $p{<}10^{-6}$), and for random forests it is almost nil
+(weighting $-0.9$\,pp, $p{=}0.18$, with tuning then adding $+16.0$\,pp,
+$p{<}10^{-7}$): bagged majority votes respond weakly to sample weights, so the
+threshold remains the reliable handle. At full parity the three enactments
+coincide, as the equivalence predicts: tuned weighting sits within
+$\pm0.7$\,pp of both tuned threshold-moving and tuned SMOTE on every learner.
+Weighting is thus a legitimate non-generative way to move the operating point;
+like oversampling, however, it shifts the probability scale relative to the
+untouched baseline (average Brier rank $3.9$ vs.\ $2.6$, Table~\ref{tab:metrics}),
+whereas explicit threshold-moving keeps the model's probabilities intact and makes
+the operating-point choice visible rather than implicit.
 
 \begin{table}[t]
 \centering
 \caption{Probability metrics by strategy (XGBoost, mean over the 27 KEEL binary
 datasets, out-of-fold). Oversampling does not improve ranking (ROC-AUC, PR-AUC at
-fixed prevalence) and worsens calibration (Brier, expected calibration error);
-recall at $10\%$ false-positive rate is likewise unimproved.}
+fixed prevalence) and recall at $10\%$ false-positive rate is unimproved. The
+calibration verdict is metric-relative: the unresampled baseline is best on the
+classical, prevalence-weighted Brier/ECE, while the oversampled models are best
+on their class-balanced versions --- two views of the same prior shift
+(\S\ref{sec:results:frontier}). The two rank rows are mean per-dataset ranks
+across the seven strategies (lower is better).}
 \label{tab:metrics}
 \small
 \input{tables/table_metrics.tex}
@@ -264,10 +373,14 @@ recall at $10\%$ false-positive rate is likewise unimproved.}
 \centering
 \caption{Threshold parity: best non-generative $-$ best generative balanced
 accuracy when \emph{every} strategy is given the same out-of-fold threshold tuning,
-per base learner (27 KEEL binary datasets). The difference is within $\pm1$\,pp on
-every learner (a small generative edge on XGBoost/RF, tied on logistic regression),
-versus a $+5.76$\,pp non-generative advantage at the default threshold --- the
-default-threshold ``dominance'' is overwhelmingly an operating-point effect.}
+per base learner (27 KEEL binary datasets; 26 for RF, whose isolet cell is
+computationally infeasible). On XGBoost, RF, logistic regression, and SVM the
+difference is within $\pm1$\,pp (versus a $+5.76$\,pp non-generative advantage at
+the default threshold): the default-threshold ``dominance'' is an operating-point
+effect. The MLP row is the diagnostic exception, analysed in the text: imbalance
+degrades a single MLP's \emph{ranking} (AUC $0.769$, restored to $0.892$ by
+resampling), so its deficit is not threshold-recoverable; MLPs also support no
+class weighting, leaving threshold-moving as the sole non-generative entry.}
 \label{tab:parity}
 \input{tables/table_parity.tex}
 \end{table}
@@ -288,6 +401,19 @@ with the minority error rate ($\rho=-0.50$, $p<10^{-4}$) and the imbalance ratio
 boundary-entangled and rebalancing is most aggressive --- the regime the mechanism
 predicts.
 
+\paragraph{A modern geometric variant does not escape the tradeoff.} Running
+G-SMOTE \cite{douzas2019geometric} under the identical protocol yields the
+same signature at a weaker dose: on KEEL it trades $-0.44$\,pp accuracy for
+$+1.90$\,pp balanced accuracy ($p=1.6\times10^{-4}$; SMOTE: $-0.55$/$+3.88$),
+and on the OpenML roster $-0.27$\,pp accuracy ($p=0.005$) for a
+non-significant $+0.47$\,pp balanced accuracy (SMOTE: $-0.33$/$+1.45$); its
+balanced accuracy is significantly \emph{below} SMOTE's
+(\appref{app:oversamplers}). Consistent with its unchanged boundary-crossing
+per synthetic point (\S\ref{sec:results:mechanism}), the geometric redesign
+buys a smaller operating-point move, not an escape from the mechanism: it
+still pays accuracy for recall while a tuned threshold obtains the shift with
+no synthetic data at all.
+
 \begin{table}[t]
 \centering
 \caption{The default-threshold non-generative advantage and the SMOTE tradeoff by
@@ -305,7 +431,7 @@ gap grows with imbalance but is an operating-point effect (Table~\ref{tab:parity
 gradient-boosted trees. With random-forest and logistic-regression base learners
 the default-threshold non-generative advantage persists ($+2.07$\,pp, $75\%$,
 $p=1.6\times10^{-4}$ for RF; $+6.44$\,pp, $96\%$, $p=2\times10^{-10}$ for logistic
-regression, the most miscalibrated learner) --- and the threshold-parity analysis
+regression, the most miscalibrated learner), and the threshold-parity analysis
 (Table~\ref{tab:parity}) likewise holds across all three learners, confirming the
 gap is an operating-point effect rather than a property of any one model family.
 
@@ -342,9 +468,9 @@ on only $12$} ($15\%$); doing nothing is best on $2$. Relative to do-nothing the
 mean balanced-accuracy advantage is $+8.1$\,pp for threshold-moving, $+6.1$ for
 balanced ensembles, $+3.3$ for oversampling, and $+2.5$ for cost-sensitive
 learning. A depth-3 decision tree over the meta-features
-(Figure~\ref{fig:regime}) gives an interpretable sketch --- low-separability
+(Figure~\ref{fig:regime}) gives an interpretable sketch: low-separability
 (overlapping) data favours balanced ensembles, while large or well-separated data
-with a clean minority favours threshold-moving --- but its leave-one-out accuracy
+with a clean minority favours threshold-moving. However, its leave-one-out accuracy
 ($0.53$) only matches the predict-majority rate, so the map is best read as
 \emph{descriptive}: it shows where each family wins, not a rule that beats
 ``always use a balanced ensemble.''
@@ -365,7 +491,7 @@ ensembles and threshold-moving cover most datasets.}
 a leave-one-dataset-out selector on the error-structure and complexity
 meta-features and compare it to fixed baselines and an oracle
 (Table~\ref{tab:selection}). The selector beats always-SMOTE decisively
-($+3.5$\,pp balanced accuracy, $p<10^{-4}$) --- but so does an imbalance-ratio-only
+($+3.5$\,pp balanced accuracy, $p<10^{-4}$), but so does an imbalance-ratio-only
 rule, because the gain comes from \emph{having non-generative strategies on the
 menu}, not from sophisticated selection. Over the strongest \emph{fixed} strategy
 (balanced RF) the edge is real but modest and design-dependent: a direct
@@ -382,7 +508,7 @@ features yield a selector that beats the always-SMOTE paradigm and recovers most
 of the achievable gain, but the dominant lever is the \emph{menu}, not selector
 sophistication. Indeed, an imbalance-ratio-only selector matches the full
 meta-feature selector (Table~\ref{tab:selection}), so the error-structure features
-add no measurable \emph{selection} value --- the triage's role here is
+add no measurable \emph{selection} value: the triage's role here is
 explanatory (localizing the boundary for the mechanistic account), not predictive. The
 actionable recommendation is therefore simple and robust:
 default to a strong non-generative strategy (balanced random forest, or
@@ -396,7 +522,7 @@ $\sim$33\,s at $n\approx50{,}000$, scaling as $O(n\log n)$ in the training-set s
 (dominated by the forest fits; \appref{app:cost}). Crucially it is a \emph{one-time},
 classifier-agnostic preprocessing step whose category assignments are reused across
 every downstream configuration, fold, and base learner, so over a realistic
-model-selection budget it is a small \emph{amortized} cost --- well below the
+model-selection budget it is a small \emph{amortized} cost, well below the
 repeated resample-and-refit it informs, not an added per-model overhead. On very
 large datasets the stratified $10{,}000$-instance subsample
 (\appref{app:subsampling}) bounds it further without changing the category

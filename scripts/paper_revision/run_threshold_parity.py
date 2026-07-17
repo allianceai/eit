@@ -33,8 +33,20 @@ One parquet PER CELL in results/paper_revision/threshold_parity/, skip-if-exists
 resume, per-cell SIGALRM timeout, watchdog hard-exit + resume. Mirrors
 run_frontier.py hardening. Stop with Ctrl-C and re-run the same command to resume.
 
+V2 (Neurocomputing official review): output moves to threshold_parity_v2/ (the v1
+parquets in threshold_parity/ are left untouched). Additions:
+  - gsmote resampler (Geometric SMOTE, Douzas & Bacao 2019 -- reviewer R7);
+  - class-balanced probability metrics (R11): brier_pos / brier_neg /
+    brier_balanced (mean of per-class Brier terms) and ece_balanced (ECE with
+    inverse-class-frequency sample weights), since plain Brier/ECE are
+    majority-dominated under imbalance;
+  - non-tree base learners (R5/E4): mlp (scaled MLPClassifier), nb (GaussianNB),
+    svm (scaled SVC(rbf, probability=True), SVM_MAX_INSTANCES subsample cap);
+  - --learners to run a subset of the learner axis.
+
 Usage:
     python -m scripts.paper_revision.run_threshold_parity --roster keel     --workers 6
+    python -m scripts.paper_revision.run_threshold_parity --roster keel     --workers 6 --learners mlp,nb,svm
     python -m scripts.paper_revision.run_threshold_parity --roster original --workers 6
     python -m scripts.paper_revision.run_threshold_parity --roster keel --dry-run
 """
@@ -56,9 +68,10 @@ import pandas as pd
 
 from scripts.paper_revision.config import RESULTS_DIR
 
-OUT_DIR = RESULTS_DIR / "threshold_parity"
-BASE_LEARNERS = ["xgboost", "rf", "logreg"]
-RESAMPLERS = ["baseline", "smote", "borderline_smote", "adasyn", "safe_level_smote", "cost"]
+OUT_DIR = RESULTS_DIR / "threshold_parity_v2"   # v1 results stay in threshold_parity/
+BASE_LEARNERS = ["xgboost", "rf", "logreg", "mlp", "nb", "svm"]
+RESAMPLERS = ["baseline", "smote", "borderline_smote", "adasyn", "safe_level_smote",
+              "gsmote", "cost"]
 ENSEMBLES = ["balanced_rf", "easy_ensemble"]
 LEARNER_AXIS = BASE_LEARNERS + ["ensemble"]
 CELL_TIMEOUT_S = 3600
@@ -103,6 +116,24 @@ def _make_model(learner):
         from sklearn.linear_model import LogisticRegression
         return make_pipeline(StandardScaler(),
                              LogisticRegression(**{**LR_PARAMS, "n_jobs": 1}))
+    if learner == "mlp":
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.neural_network import MLPClassifier
+        from scripts.paper_revision.config import MLP_PARAMS
+        return make_pipeline(StandardScaler(), MLPClassifier(**MLP_PARAMS))
+    if learner == "nb":
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.naive_bayes import GaussianNB
+        return make_pipeline(StandardScaler(), GaussianNB())
+    if learner == "svm":
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.svm import SVC
+        from scripts.paper_revision.config import SVM_PARAMS
+        return make_pipeline(StandardScaler(),
+                             SVC(**SVM_PARAMS, probability=True))
     raise ValueError(learner)
 
 
@@ -153,18 +184,27 @@ def _fit_proba(model, Xr, yr, w, Xte, pos):
 # Metrics
 # ---------------------------------------------------------------------------
 
-def _ece(y_pos, p, n_bins=10):
-    """Expected calibration error of the positive-class probability."""
+def _ece(y_pos, p, n_bins=10, sample_weight=None):
+    """Expected calibration error of the positive-class probability.
+
+    With `sample_weight`, every bin statistic (mass, accuracy, confidence) is
+    weighted; passing inverse-class-frequency weights yields a class-balanced
+    ECE in which both classes contribute equally (plain ECE is majority-dominated
+    under imbalance).
+    """
+    w = np.ones(len(p), dtype=float) if sample_weight is None else np.asarray(sample_weight, dtype=float)
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     idx = np.clip(np.digitize(p, edges[1:-1]), 0, n_bins - 1)
     ece = 0.0
-    n = len(p)
+    n = w.sum()
     for b in range(n_bins):
         m = idx == b
-        c = int(m.sum())
+        c = w[m].sum()
         if c == 0:
             continue
-        ece += (c / n) * abs(y_pos[m].mean() - p[m].mean())
+        acc = (w[m] * y_pos[m]).sum() / c
+        conf = (w[m] * p[m]).sum() / c
+        ece += (c / n) * abs(acc - conf)
     return float(ece)
 
 
@@ -187,6 +227,19 @@ def _prob_metrics(yte, pte, pos):
     out["pr_auc"] = float(average_precision_score(y_pos, pte))
     out["brier"] = float(brier_score_loss(y_pos, pte))
     out["ece"] = _ece(y_pos, pte)
+    # Class-balanced calibration metrics (Neurocomputing R11): plain Brier/ECE are
+    # majority-dominated under imbalance. brier_balanced averages the per-class
+    # Brier terms; ece_balanced weights instances by inverse class frequency.
+    pos_m, neg_m = y_pos == 1, y_pos == 0
+    if pos_m.any() and neg_m.any():
+        out["brier_pos"] = float(((1.0 - pte[pos_m]) ** 2).mean())
+        out["brier_neg"] = float((pte[neg_m] ** 2).mean())
+        out["brier_balanced"] = 0.5 * (out["brier_pos"] + out["brier_neg"])
+        w = np.where(pos_m, 0.5 / pos_m.mean(), 0.5 / neg_m.mean())
+        out["ece_balanced"] = _ece(y_pos, pte, sample_weight=w)
+    else:
+        out["brier_pos"] = out["brier_neg"] = out["brier_balanced"] = float("nan")
+        out["ece_balanced"] = float("nan")
     out["recall_fpr05"] = _recall_at_fpr(y_pos, pte, 0.05)
     out["recall_fpr10"] = _recall_at_fpr(y_pos, pte, 0.10)
     return out
@@ -256,7 +309,12 @@ def _oof_proba(make_fn, resampler, Xtr, ytr, pos, seed):
 def _strategies_for(learner):
     if learner == "ensemble":
         return [(s, None) for s in ENSEMBLES]            # (strategy, resampler=None)
-    return [(r, r) for r in RESAMPLERS]                   # strategy name == resampler
+    resamplers = RESAMPLERS
+    if learner == "mlp":
+        # MLPClassifier supports neither sample_weight nor class_weight, so the
+        # class-balanced-weights strategy cannot be fit on it.
+        resamplers = [r for r in resamplers if r != "cost"]
+    return [(r, r) for r in resamplers]                   # strategy name == resampler
 
 
 def _make_for(learner, strategy):
@@ -269,9 +327,10 @@ def evaluate(roster, learner, dataset, X, y):
     from sklearn.model_selection import RepeatedStratifiedKFold
     from sklearn.preprocessing import LabelEncoder
     from scripts.paper_revision.cv_runner import _stratified_subsample
-    from scripts.paper_revision.config import MAX_INSTANCES, RANDOM_STATE
+    from scripts.paper_revision.config import MAX_INSTANCES, SVM_MAX_INSTANCES, RANDOM_STATE
 
-    X, y = _stratified_subsample(X, y, MAX_INSTANCES, RANDOM_STATE)
+    cap = SVM_MAX_INSTANCES if learner == "svm" else MAX_INSTANCES
+    X, y = _stratified_subsample(X, y, cap, RANDOM_STATE)
     le = LabelEncoder().fit(y)
     y = le.transform(y)
     counts = np.bincount(y)
@@ -378,10 +437,19 @@ def main():
     ap = argparse.ArgumentParser(description="Threshold-parity + probability-metric benchmark.")
     ap.add_argument("--roster", choices=["keel", "original"], required=True)
     ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--learners", default="",
+                    help="comma-separated subset of the learner axis "
+                         f"(default: all of {LEARNER_AXIS})")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
     all_cells = build_cells(args.roster)
+    if args.learners:
+        keep = {l for l in args.learners.split(",") if l}
+        unknown = keep - set(LEARNER_AXIS)
+        if unknown:
+            ap.error(f"unknown learners: {sorted(unknown)}; choose from {LEARNER_AXIS}")
+        all_cells = [c for c in all_cells if c[1] in keep]
     pending = [c for c in all_cells if not _out_path(*c).exists()]
     print(f"[{_ts()}] threshold_parity/{args.roster}: {len(all_cells)} cells, "
           f"{len(pending)} pending, {len(all_cells) - len(pending)} done.", flush=True)

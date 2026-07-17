@@ -26,11 +26,11 @@ from scipy.stats import wilcoxon
 
 from scripts.paper_revision.config import RESULTS_DIR
 
-CELLS = RESULTS_DIR / "threshold_parity"
+CELLS = RESULTS_DIR / "threshold_parity_v2"   # v2 run (adds gsmote, balanced metrics, mlp/nb/svm)
 TAB = Path("paper_v2/tables")
-GEN = ["smote", "borderline_smote", "adasyn", "safe_level_smote"]
+GEN = ["smote", "borderline_smote", "adasyn", "safe_level_smote", "gsmote"]
 NONGEN = ["baseline", "cost", "balanced_rf", "easy_ensemble"]
-LEARNERS = ["xgboost", "rf", "logreg"]
+LEARNERS = ["xgboost", "rf", "logreg", "mlp", "nb", "svm"]
 
 
 def _load():
@@ -91,6 +91,10 @@ def main():
     if "baseline" in bt.columns and "smote" in bt.columns:
         comparisons.append(("threshold-move vs SMOTE@tuned", bt["baseline"], bt["smote"]))
         comparisons.append(("SMOTE@tuned vs SMOTE@default", bt["smote"], bd["smote"]))
+    if "gsmote" in bt.columns:
+        comparisons.append(("threshold-move vs G-SMOTE@tuned", bt["baseline"], bt["gsmote"]))
+        comparisons.append(("G-SMOTE@tuned vs G-SMOTE@default", bt["gsmote"], bd["gsmote"]))
+        comparisons.append(("G-SMOTE@tuned vs SMOTE@tuned", bt["gsmote"], bt["smote"]))
     comparisons.append(("best non-gen@tuned vs best gen@tuned", bestng_t, bestgen_t))
     comparisons.append(("best non-gen@tuned vs best gen@default", bestng_t, bestgen_d))
     for name, a, b in comparisons:
@@ -126,14 +130,22 @@ def main():
     # ---------- (C) probability metrics on XGBoost ----------
     print("\n=== (C) probability metrics by strategy (XGBoost, mean over datasets) ===")
     order = ["baseline", "cost", "smote", "borderline_smote", "adasyn",
-             "safe_level_smote", "balanced_rf", "easy_ensemble"]
+             "safe_level_smote", "gsmote", "balanced_rf", "easy_ensemble"]
     metric_rows = []
     for value, lab in [("roc_auc", "ROC-AUC"), ("pr_auc", "PR-AUC"),
-                       ("brier", "Brier"), ("ece", "ECE"),
+                       ("brier", "Brier"), ("brier_balanced", "Brier (bal.)"),
+                       ("ece", "ECE"), ("ece_balanced", "ECE (bal.)"),
                        ("recall_fpr10", "Rec@FPR10")]:
         p = piv("xgboost", value)
         means = {m: p[m].mean() for m in order if m in p.columns}
         metric_rows.append((lab, means))
+    # average per-dataset ranks (rank 1 = best) across the same-learner strategies,
+    # supporting the rank numbers quoted in Section 5.5
+    for value, lab, asc in [("roc_auc", "ROC-AUC rank", False), ("brier", "Brier rank", True)]:
+        p = piv("xgboost", value)
+        cols = [m for m in order if m in p.columns]
+        r = p[cols].rank(axis=1, ascending=asc).mean()
+        metric_rows.append((lab, {m: r[m] for m in cols}))
     present = [m for m in order if any(m in mr[1] for mr in metric_rows)]
     hdr = "  " + "metric".ljust(11) + "".join(f"{m[:9]:>10s}" for m in present)
     print(hdr)
@@ -166,7 +178,8 @@ def _write_parity_table(rows):
     lines = [r"\begin{tabular}{lrrrr}", r"\toprule",
              r"Base learner & $n$ & NG$\ge$G & non-gen advantage & paired $p$ \\",
              r"\midrule"]
-    name = {"xgboost": "XGBoost", "rf": "Random forest", "logreg": "Logistic regression"}
+    name = {"xgboost": "XGBoost", "rf": "Random forest", "logreg": "Logistic regression",
+            "mlp": "MLP", "nb": "Gaussian naive Bayes", "svm": "SVM (RBF)"}
     for r in rows:
         lines.append(f"{name.get(r['learner'], r['learner'])} & {int(r['n'])} & "
                      f"{r['wr']:.0f}\\% & ${r['adv']:+.2f}$ "
@@ -178,12 +191,14 @@ def _write_parity_table(rows):
 def _write_metrics_table(metric_rows, present):
     short = {"baseline": "none", "cost": "cost", "smote": "SMOTE",
              "borderline_smote": "Border", "adasyn": "ADASYN",
-             "safe_level_smote": "SafeLvl", "balanced_rf": "bRF", "easy_ensemble": "EasyEns"}
+             "safe_level_smote": "SafeLvl", "gsmote": "G-SMOTE",
+             "balanced_rf": "bRF", "easy_ensemble": "EasyEns"}
     cols = "l" + "r" * len(present)
     head = " & ".join([""] + [short.get(m, m) for m in present])
     lines = [rf"\begin{{tabular}}{{{cols}}}", r"\toprule", head + r" \\", r"\midrule"]
     for lab, means in metric_rows:
-        lines.append(" & ".join([lab] + [f"{means.get(m, float('nan')):.3f}" for m in present]) + r" \\")
+        dp = 2 if lab.endswith("rank") else 3
+        lines.append(" & ".join([lab] + [f"{means.get(m, float('nan')):.{dp}f}" for m in present]) + r" \\")
     lines += [r"\bottomrule", r"\end{tabular}"]
     (TAB / "table_metrics.tex").write_text("\n".join(lines) + "\n")
 

@@ -51,6 +51,9 @@ XGBOOST_METHODS = [
     "triage_weighting_class_conditional", "triage_weighting_balanced", "triage_weighting_protect_minority",
     # The formalized improved weighter: aggressive on learnable minority, not the boundary.
     "triage_cost_sensitive",
+    # Neurocomputing R7: modern geometric variant (Douzas & Bacao 2019), authors'
+    # maintained implementation. All earlier cells skip on resume; this adds 27 cells.
+    "gsmote",
 ]
 # Cross-classifier robustness: the core tradeoff / masking / weighting methods.
 ABLATION_METHODS = ["baseline", "smote", "triage_weighting",

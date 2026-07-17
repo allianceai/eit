@@ -24,11 +24,21 @@ split only (threshold chosen on out-of-fold training predictions, so there is no
 test leakage). Binary-only strategies (threshold-moving, EasyEnsemble) are skipped
 on multiclass datasets and excluded from those datasets' candidate sets.
 
-\paragraph{Metrics.} Balanced accuracy is the primary metric --- it is the
-objective that motivates rebalancing --- and we report accuracy alongside it to
-expose the tradeoff, plus G-mean and MCC as tradeoff-internalizing checks. We
-report win rates and Wilcoxon signed-rank \cite{wilcoxon1945individual}
-$p$-values; per-dataset values are means over the $25$ folds.
+\paragraph{Metrics.} Balanced accuracy is the primary metric (it is the
+objective that motivates rebalancing), and we report accuracy alongside it to
+expose the tradeoff, plus G-mean and MCC as tradeoff-internalizing checks.
+
+\paragraph{Statistical protocol.} Because raw scores are heterogeneous across
+datasets, we never pool them; all cross-dataset numbers are either
+(a)~\emph{paired per-dataset differences} between two strategies on the same
+dataset (reported as mean/median percentage-point deltas with win rates and
+Wilcoxon signed-rank \cite{wilcoxon1945individual} $p$-values), or
+(b)~\emph{average ranks} across strategies, compared with a Friedman test and
+Nemenyi post-hoc analysis \cite{demsar2006statistical} (the critical-difference
+diagram of \S\ref{sec:results:frontier}). Pairwise contrasts therefore use
+Wilcoxon; menu-wide rankings use Friedman--Nemenyi. Per-dataset values are means
+over the $25$ folds; raw per-dataset scores are used only to compare strategies
+within the same dataset.
 
 \paragraph{Selection protocol.} The prescriptive selector
 (\S\ref{sec:method:selection}) is evaluated leave-one-dataset-out across the

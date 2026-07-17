@@ -216,18 +216,30 @@ def fig_overlap(scatter_sep=0.6):
         ax.axvline(0, c="g", lw=2, label="Bayes boundary")
         ax.set_title(title, fontsize=10); ax.set_xlim(-4, 4); ax.set_ylim(-3.5, 3.5)
         ax.set_xticks([]); ax.set_yticks([])
-    axes[0].legend(fontsize=6, loc="upper left")
+    # capture the scatter-marker handles for one shared legend below the panels
+    _leg_handles, _leg_labels = axes[0].get_legend_handles_labels()
 
     ax = axes[2]
     g = d.groupby("separation")[["wrong_side_smote", "wrong_side_clean_masked"]].mean()
     ax.plot(g.index, 100*g["wrong_side_smote"], "o-", c="C3", label="Standard SMOTE")
     ax.plot(g.index, 100*g["wrong_side_clean_masked"], "s-", c="C2", label="Clean-masked")
+    # Extended variant sweep (Neurocomputing R7): G-SMOTE / ADASYN / Borderline
+    ext_path = RESULTS_DIR / "overlap_synthetic_gsmote.parquet"
+    if ext_path.exists():
+        e = pd.read_parquet(ext_path).groupby("separation")[
+            ["wrong_side_gsmote", "wrong_side_adasyn", "wrong_side_borderline_smote"]].mean()
+        ax.plot(e.index, 100*e["wrong_side_gsmote"], "^--", c="C4", label="G-SMOTE")
+        ax.plot(e.index, 100*e["wrong_side_adasyn"], "v--", c="C5", label="ADASYN")
+        ax.plot(e.index, 100*e["wrong_side_borderline_smote"], "d--", c="C8",
+                label="Borderline")
     ax.axvline(scatter_sep, c="0.8", ls=":", lw=1)
     ax.set_xlabel("class separation $s$ (more overlap $\\leftarrow$)")
     ax.set_ylabel("synthetic points across\nBayes boundary (\\%)")
     ax.legend(fontsize=8); ax.set_title("Boundary-crossing generation", fontsize=10)
     ax.invert_xaxis()
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0.10, 1, 1])
+    fig.legend(_leg_handles, _leg_labels, loc="lower center", ncol=5, fontsize=10,
+               markerscale=2.0, frameon=False, columnspacing=1.8, handletextpad=0.5)
     plt.savefig(FIG_DIR / "fig_overlap.pdf", bbox_inches="tight")
     plt.close()
     print(f"  fig_overlap: seps={seps}; "

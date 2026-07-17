@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\caption{Oversampler family vs.\ standard SMOTE (XGBoost, 52 OpenML-roster datasets): mean metric, win rate over SMOTE, and Wilcoxon $p$. The geometric variant G-SMOTE (added at review) buys significantly \emph{less} balanced accuracy than SMOTE at a comparable accuracy level; only polynom-fit (a known weak-tradeoff variant) and the triage clean-masked variant significantly recover accuracy.}
+\label{tab:smote}
+\begin{tabular}{lrrrrrr}
+\toprule
+Method (vs.\ SMOTE) & Mean Acc & WR Acc & $p_{\text{Acc}}$ & Mean BAcc & WR BAcc & $p_{\text{BAcc}}$ \\
+\midrule
+baseline & 0.8538 & 53.8\% & 0.001** & 0.7768 & 11.5\% & 0.000*** \\
+borderline\_smote & 0.8505 & 38.5\% & 0.914 & 0.7911 & 25.0\% & 0.013* \\
+adasyn & 0.8507 & 26.9\% & 0.180 & 0.7909 & 32.7\% & 0.444 \\
+safe\_level\_smote & 0.8484 & 36.5\% & 0.379 & 0.7900 & 34.6\% & 0.282 \\
+polynom\_fit\_smote & 0.8542 & 55.8\% & 0.001*** & 0.7800 & 17.3\% & 0.000*** \\
+prowsyn & 0.8527 & 48.1\% & 0.128 & 0.7866 & 21.2\% & 0.000*** \\
+mwmote & 0.8517 & 38.5\% & 0.771 & 0.7856 & 28.8\% & 0.001** \\
+gsmote & 0.8510 & 44.2\% & 0.677 & 0.7814 & 25.0\% & 0.000*** \\
+napierala\_guided\_smote & 0.8507 & 51.9\% & 0.103 & 0.7885 & 32.7\% & 0.036* \\
+clean\_masked\_smote & 0.8519 & 46.2\% & 0.016* & 0.7863 & 17.3\% & 0.000*** \\
+\bottomrule
+\end{tabular}
+\end{table}

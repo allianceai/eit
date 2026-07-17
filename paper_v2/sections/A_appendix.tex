@@ -2,8 +2,10 @@
 
 \section{Threshold Sensitivity}\label{app:sensitivity}
 
-The triage thresholds ($\tau_{\text{noise}} = 0.12$, $\tau_{\text{cat2}} = 0.4$,
-$w = 2.0$) are fixed across all datasets. We swept each threshold across a
+The triage thresholds ($\tau_{\text{noise}} = 0.12$, $\tau_{\text{cat2}} = 0.4$)
+and the triage-weighting upweight factor ($w = 2.0$, the sample-weight multiplier
+that the triage-weighting strategy of \S\ref{sec:method:menu} applies to the correct
+same-class neighbours of Cat\,2 errors) are fixed across all datasets. We swept each threshold across a
 range of values and measured downstream XGBoost accuracy: $\tau_{\text{noise}}
 \in [0.05, 0.30]$, $\tau_{\text{cat2}} \in [0.2, 0.6]$, $w \in [1.0, 5.0]$.
 Across the benchmark datasets, 74\% show $< 0.5\%$ accuracy
@@ -72,6 +74,74 @@ The triage time scales roughly as $O(n \log n)$ in the number of training
 instances and is dominated by the random-forest fits; the local class-ratio
 computation (k-NN with $k=5$) contributes $< 5\%$ of total triage time
 across all dataset sizes.
+
+\section{Instrument Robustness: Non-Tree Ensembles}\label{app:nontree}
+
+The remedy decomposition's model-derived signals come from a random-forest
+ensemble (\S\ref{sec:method:uncert}). To verify the headline is not an
+artefact of tree-based uncertainty, we re-derive the full decomposition with
+two bagged non-tree instruments over the full 27 KEEL + 54
+OpenML/scikit-learn roster (81 dataset cells; the headline statistics of
+Table~\ref{tab:reducibility} use the 79-dataset menu roster of \S\ref{sec:design}): $B{=}25$
+bootstrap-bagged multilayer perceptrons (scaled, $64{\times}32$ hidden units,
+early stopping) and $B{=}25$ bootstrap-bagged logistic regressions. Every
+signal remains out-of-bag: only ensemble members whose bootstrap excluded an
+instance contribute to its probabilities, and the Shaker-style
+aleatoric--epistemic decomposition is taken over those members. The local
+class ratio is the identical $k$-NN computation. Two design notes: (i)~members
+are unweighted, because class-balanced members enact the operating-point shift
+\emph{inside} the instrument (completely so for logistic regression,
+\S\ref{sec:results:frontier}) and dissolve the default-threshold deficit being
+decomposed; (ii)~Cat\,1 is gated by TCP alone, as the forest-consensus noise
+score has no non-tree analogue, which shifts part of the residue from the
+data-reducible/irreducible classes into noise but leaves the
+threshold-recoverability axis untouched.
+
+\begin{table}[t]
+\centering
+\caption{Remedy decomposition by instrument (means over datasets with
+$\ge 5$ minority errors). The threshold-recoverable share, the paper's
+headline, is stable across instruments ($68$--$69\%$; per-dataset correlation
+with the RF instrument $r=0.68$ / $0.55$). The non-tree instruments assign
+more of the residue to noise (TCP-only gate, note (ii)).}
+\label{tab:nontree}
+\input{tables/table_nontree.tex}
+\end{table}
+
+The threshold-recoverable share is essentially unchanged (Table~\ref{tab:nontree}):
+$69\%$ for bagged MLPs and $68\%$ for bagged logistic regression against $69\%$
+for the RF instrument, rising to $77\%$ on $\mathrm{IR}>3$ datasets for both
+(RF: $74\%$). The decomposition's ordering, threshold-recoverable far above
+everything else, is instrument-independent.
+
+\section{Ensemble-Size Sensitivity}\label{app:msens}
+
+The instrument uses $M{=}5$ forests of $T{=}100$ trees, matching standard
+deep-ensemble practice ($M{=}5$ in \cite{lakshminarayanan2017simple}).
+Recomputing the full decomposition for $M \in \{1,2,5,10,20\}$ on a
+10-dataset IR-spanning subset (Table~\ref{tab:msens}): the triage category
+fractions move by at most $2.3$\,pp between $M{=}5$ and $M{=}20$, and the
+threshold-recoverable share by $2.3$\,pp on average ($3.7$\,pp for $M{=}10$);
+the largest single-dataset deviations occur where the minority error set is
+tiny (a handful of instances, so one flip moves the fraction by many points).
+Below $M{=}5$ the decomposition is visibly unstable. $M{=}5$ therefore sits at
+the stability knee, and the conclusions do not change with a larger ensemble.
+
+\begin{table}[t]
+\centering
+\caption{Ensemble-size sensitivity: mean threshold-recoverable share and
+absolute deviations from the $M{=}5$ reference across 10 datasets.}
+\label{tab:msens}
+\input{tables/table_msens.tex}
+\end{table}
+
+\section{Extended Oversampler Comparison}\label{app:oversamplers}
+
+Table~\ref{tab:smote} reports the full oversampler family, including the
+Kov\'acs top-ranked variants and Geometric SMOTE (added at review), against
+standard SMOTE on the OpenML roster.
+
+\input{tables/table3_smote.tex}
 
 \section{Dataset Listing}\label{app:datasets}
 

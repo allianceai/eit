@@ -5,11 +5,11 @@ finding is that the minority-class deficit \emph{decomposes by remedy} and is
 predominantly \emph{threshold-recoverable}: across 79 datasets a mean of $69\%$ of
 minority errors ($74\%$ at $\mathrm{IR}>3$) are corrected by moving the decision
 threshold alone, with only $\sim$7\% data-reducible and $\sim$16\% irreducible.
-This explains a regularity the field has documented but not explained --- that
+This explains a regularity the field has documented but not explained, namely that
 resampling leaves ranking (AUC) unchanged and a threshold shift reproduces its
-benefit without synthetic generation and with better calibration
-\cite{provost2000imbalanced,elor2022smote,goorbergh2022harm,dalpozzolo2015calibrating}
---- and reframes the long-observed accuracy/recall tradeoff: oversampling is an
+benefit without synthetic generation and without shifting the probability scale
+\cite{provost2000imbalanced,elor2022smote,goorbergh2022harm,dalpozzolo2015calibrating},
+and reframes the long-observed accuracy/recall tradeoff: oversampling is an
 implicit, inefficient enactment of a threshold move (it shifts the operating point
 by generating across the overlap boundary, at an accuracy and calibration cost),
 not a way to build a better classifier. Consistent with this, once every strategy
@@ -19,12 +19,19 @@ families collapses to within $\pm1$\,pp.
 \paragraph{Exclusion vs.\ targeting.} The dominant paradigm in oversampling
 research \emph{targets} sparse or boundary regions for generation
 (ADASYN \cite{he2008adasyn}, Borderline-SMOTE \cite{han2005borderline}, and a long
-tail of variants \cite{kovacs2019smote}). Our mechanism explains why this has not
-resolved the tradeoff: these variants all generate at or near the boundary, which
+tail of variants \cite{kovacs2019smote}). We acknowledge their design intent:
+boundary-targeting variants are often deployed deliberately to buy true-positive
+rate at some true-negative cost, in applications where missed positives dominate
+the loss. Our results do not say that operating point is wrong; they say a tuned
+threshold reaches \emph{any} such recall-biased operating point explicitly,
+with calibrated probabilities, and without synthetic data
+(\S\ref{sec:results:frontier}). Our mechanism explains why boundary targeting has
+not resolved the accuracy tradeoff itself: these variants all generate at or near
+the boundary, which
 is exactly where generation manufactures majority-territory ``minority'' points.
 Consistent with this, masking the boundary seeds from SMOTE removes both the
-accuracy cost \emph{and} the balanced-accuracy benefit --- corroborating that the
-benefit \emph{is} the boundary generation --- so the productive move is not a
+accuracy cost \emph{and} the balanced-accuracy benefit (corroborating that the
+benefit \emph{is} the boundary generation), so the productive move is not a
 better oversampler but a different lever entirely.
 
 \paragraph{The menu matters more than the selector.} A recent line of work asks
@@ -34,11 +41,16 @@ always-SMOTE. We find the reason: given a menu that includes the dominant
 non-generative strategies, even an imbalance-ratio-only rule beats always-SMOTE,
 and a learned selector over rich error-structure and complexity meta-features adds
 only a modest, robust increment over the single best fixed strategy (balanced
-random forest) --- significant on balanced accuracy and G-mean, absent on MCC. The
+random forest), significant on balanced accuracy and G-mean, absent on MCC. The
 practical recommendation is therefore not a sophisticated selector but a change of
 default: prefer a strong non-generative strategy, and reserve oversampling for the
 $\sim$15\% of regimes where the map (\S\ref{sec:results:regime}) says it
-wins.
+wins. Class-weighted learning is an equally legitimate non-generative default
+where it suits the pipeline, with one caveat our parity analysis quantifies
+(\S\ref{sec:results:frontier}): how completely weighting enacts the
+operating-point shift is learner-dependent (fully for logistic regression,
+partially for boosting, barely for bagged forests), so explicit threshold-moving
+remains the more uniformly reliable handle.
 
 \paragraph{Relation to prior categorization and complexity work.} Napiera{\l}a
 \& Stefanowski's instance types \cite{napierala2016types} and data-complexity
@@ -51,10 +63,17 @@ boundary generation hurts, rather than reporting a correlation. This
 intervention-supported account is what the otherwise extensive selection
 literature lacks.
 
-\paragraph{Toward deep imbalanced learning.} Our base learners are tabular
-(gradient-boosted trees, random forests, logistic regression); the analysis is
-deliberately a controlled, mechanism-level foundation laid before the deep case. Two
-of its three pillars are architecture-agnostic, and we expect them to carry over. The
+\paragraph{Toward deep imbalanced learning.} Our base learners are tabular;
+the analysis is
+deliberately a controlled, mechanism-level foundation laid before the deep case,
+and the six-learner parity sweep already contains the first empirical bridge: a
+single early-stopped MLP is the one learner whose \emph{ranking} imbalance
+corrupts (AUC $0.769$, restored to $0.892$ by resampling,
+\S\ref{sec:results:frontier}), so for undertrained neural learners resampling
+has genuine representation value beyond the operating point, while bagging the
+same MLPs restores the ranking and with it the threshold-recoverable
+decomposition (\appref{app:nontree}). Two
+of the account's three pillars are architecture-agnostic, and we expect them to carry over. The
 remedy decomposition needs only a ranking score and an aleatoric--epistemic signal,
 both available from deep models via deep ensembles or MC-dropout
 \cite{lakshminarayanan2017simple}; and the threshold-recoverability result is the same
@@ -78,10 +97,13 @@ recommendation. (ii) The triage thresholds ($\tau_{\text{noise}}=0.12$,
 $\tau_{\text{cat2}}=0.4$) are fixed across datasets; a sensitivity analysis
 (\appref{app:sensitivity}) shows category assignments and downstream
 accuracy are stable across a wide range. (iii) We validate the default-threshold
-advantage --- and its collapse to within $\pm1$\,pp at threshold parity --- across
-three tabular base learners (gradient-boosted trees, random forests, and logistic
-regression; \S\ref{sec:results:frontier}), so neither the default-threshold gap nor
-the operating-point explanation is a model-specific artefact; the extension to
-\emph{deep} imbalanced learning is its own thread, sketched above. (iv) The regime map is descriptive: a depth-3 rule does not beat
+advantage (and its collapse to within $\pm1$\,pp at threshold parity) across
+six base learners (gradient-boosted trees, random forests, logistic regression,
+naive Bayes, RBF-SVM, and MLP; \S\ref{sec:results:frontier}), so neither the
+default-threshold gap nor
+the operating-point explanation is a model-specific artefact; the single MLP is
+the documented exception (its ranking, not just its threshold, degrades under
+imbalance), which delimits the account's scope and motivates the deep extension
+sketched above. (iv) The regime map is descriptive: a depth-3 rule does not beat
 ``always use a balanced ensemble,'' so the map informs rather than automates the
 choice.

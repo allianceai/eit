@@ -84,6 +84,9 @@ XGBOOST_METHODS = [
     "triage_weighting_class_conditional", "triage_weighting_balanced", "triage_weighting_protect_minority",
     # The formalized improved weighter: aggressive on learnable minority, not the boundary.
     "triage_cost_sensitive",
+    # Neurocomputing R7: modern geometric variant (Douzas & Bacao 2019), authors'
+    # maintained implementation. All earlier cells skip on resume; this adds 52 cells.
+    "gsmote",
 ]
 
 # Classifier-robustness ablation (R3: is the accuracy/balanced-accuracy tradeoff a

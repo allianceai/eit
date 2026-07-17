@@ -12,3 +12,4 @@ matplotlib
 threadpoolctl
 openml
 rich
+imbalanced-learn-extra==0.2.10

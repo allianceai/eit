@@ -111,7 +111,9 @@ def _plot_cd(avg, menu, CD, N, chi, p):
         col = "C0" if menu[j] in NONGEN else "C1"
         ax.plot([avg[j], avg[j]], [k + 0.9, y], color=col, lw=1.3)
         ax.plot([avg[j], xtext], [y, y], color=col, lw=1.3)
-        ax.text(xtext + (0.18 if right else -0.18), y,
+        # x-axis is inverted, so push the label OUTWARD past the connector end
+        # (toward the figure edge) to leave a clean gap instead of overlapping it
+        ax.text(xtext + (-0.25 if right else 0.25), y,
                 f"{LABEL.get(menu[j], menu[j])} ({avg[j]:.2f})",
                 ha="left" if right else "right", va="center", fontsize=11.5,
                 color=col, fontweight=("bold" if menu[j] in NONGEN else "normal"))

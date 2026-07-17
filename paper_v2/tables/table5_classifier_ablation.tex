@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\caption{Cross-classifier robustness (mean $\Delta$, percentage points; stars = Wilcoxon significance). SMOTE columns vs.\ no-resampling baseline; clean-masked and Napierala-guided vs.\ SMOTE. The accuracy/balanced-accuracy tradeoff (SMOTE) holds across every classifier family; triage weighting stays Pareto-neutral; triage masking (clean-masked) recovers accuracy over SMOTE where Napierala-guided does not.}
+\label{tab:classifier_ablation}
+\begin{tabular}{lrrrrr}
+\toprule
+Classifier & SMOTE $\Delta$Acc & SMOTE $\Delta$BAcc & TriageWt $\Delta$Acc & CleanMask $\Delta$Acc & NapGuided $\Delta$Acc \\
+\midrule
+xgboost & -0.32** & +1.62*** & +0.02 & +0.14* & +0.01 \\
+rf & -0.42* & +2.37*** & +0.00 & +0.12 & +0.06 \\
+lgbm & -0.09 & +1.94*** & -0.02 & +0.03 & -0.02 \\
+logreg & -4.42*** & +5.91*** & +0.01 & +1.13*** & +0.77* \\
+svm & -2.27*** & +5.80*** & +0.10** & +1.09*** & +0.36* \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -34,6 +34,20 @@ training split only.
 | §5.5 **Regime map**, **Fig. regime** | `build_regime_map.py` | `figures/fig_regime_map.pdf`, `regime_map_*.parquet` |
 | §5.6 Selection + **Table selection** | `meta_selection.py --menu full --metric {balanced_accuracy,g_mean,mcc} [--features {all,core,triage}]` | `meta_selection_full_*.parquet` |
 
+## Revision experiments (Neurocomputing review, 2026-07)
+
+Extra dependency: `pip install imbalanced-learn-extra` (== 0.2.10; provides
+`imblearn_extra.gsmote.GeometricSMOTE`, the Douzas & Bacao authors' maintained
+implementation).
+
+| Reviewer point | Script | Output |
+|---|---|---|
+| R7 G-SMOTE benchmark cells (KEEL / OpenML) | `run_keel.py` / `run_parallel.py --only-method gsmote` | `keel_benchmark/`, `main_benchmark/` |
+| R7 G-SMOTE boundary-crossing (controlled) | `run_overlap_gsmote.py` | `overlap_synthetic_gsmote.parquet` |
+| R11/R5 parity v2: balanced Brier/ECE, gsmote, mlp/nb/svm learners | `run_threshold_parity.py --roster keel` | `threshold_parity_v2/` |
+| R5 non-tree remedy decomposition | `run_reducibility_nontree.py` | `reducibility_nontree.parquet` |
+| R6 ensemble-size (M) sensitivity | `run_m_sensitivity.py` | `m_sensitivity.parquet` |
+
 ## Headline numbers (verified)
 
 - Interventional: boundary (Cat3) augmentation reproduces the SMOTE signature,

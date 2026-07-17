@@ -85,14 +85,17 @@ def _best_tau_bacc(p_minority, is_minority):
     return best_tau
 
 
-def _decompose(name, benchmark, X, y):
+def _decompose(name, benchmark, X, y, triage_overrides=None):
     from endgame.augmentation.error_triage import ErrorTriage
     X, y = _stratified_subsample(X, y, MAX_INSTANCES, RANDOM_STATE)
     y = y.astype(int)
     counts = np.bincount(y)
     minority = int(np.argmin(np.where(counts == 0, counts.max() + 1, counts)))
-    t = ErrorTriage(**{**TRIAGE_PARAMS, "noise_mode": "balanced",
-                       "random_state": 42, "n_jobs": 1}).fit(X, y)
+    params = {**TRIAGE_PARAMS, "noise_mode": "balanced",
+              "random_state": 42, "n_jobs": 1}
+    if triage_overrides:
+        params.update(triage_overrides)
+    t = ErrorTriage(**params).fit(X, y)
     cats = t.categories_
     p_min = _oob_minority_prob(t, minority)
     is_min = (y == minority).astype(int)
@@ -113,7 +116,13 @@ def _decompose(name, benchmark, X, y):
         return float(m.sum() / n_err) if n_err else 0.0
 
     ir = float(counts[counts > 0].max() / counts[counts > 0].min())
+    err_all = cats != "correct"
+    n_err_all = max(int(err_all.sum()), 1)
     return {
+        "frac_errors_cat1": float((cats == "noise").sum() / n_err_all),
+        "frac_errors_cat2": float((cats == "data_limited").sum() / n_err_all),
+        "frac_errors_cat3": float((cats == "irreducible").sum() / n_err_all),
+        "n_errors_all": int(err_all.sum()),
         "dataset": name, "benchmark": benchmark, "n": len(y), "ir": ir,
         "n_classes": len(counts[counts > 0]),
         "minority_size": int(is_min.sum()), "n_minority_err_default": n_err,

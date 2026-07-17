@@ -15,12 +15,12 @@ imbalanced data and analyze how oversampling interacts with each type. Crucially
 all of these characterize instance \emph{difficulty}; none condition on the model
 being \emph{wrong} and ask \emph{which remedy applies}. Our decomposition differs
 in three ways: (i) it operates on the \emph{misclassified minority} and maps each
-error to a remedy --- move the threshold, add data, or accept it --- rather than
+error to a remedy (move the threshold, add data, or accept it) rather than
 scoring difficulty; (ii) it introduces a \emph{threshold-recoverable} class (the
 model already ranks the instance correctly and only the default cutoff is wrong),
 an axis absent from prior difficulty taxonomies; and (iii) it combines a
-model-based aleatoric--epistemic decomposition --- separating Bayes-rate ambiguity
-from sample-size limits, which k-NN typing cannot --- with a local class-ratio
+model-based aleatoric--epistemic decomposition (separating Bayes-rate ambiguity
+from sample-size limits, which k-NN typing cannot) with a local class-ratio
 measure, used as a diagnostic rather than as a competing oversampler.
 
 \paragraph{Threshold-moving, cost-sensitivity, and the limits of resampling.}
@@ -34,7 +34,16 @@ curves. Large-scale and clinical studies confirm the empirical consequence:
 resampling does not improve ranking/AUC and its apparent gains are reproduced by a
 threshold shift, while it degrades probability calibration
 \cite{elor2022smote,goorbergh2022harm,dalpozzolo2015calibrating,carriero2025harms}.
-We do \emph{not} claim these regularities as new --- we reproduce them across our
+A parallel critical line reaches a compatible verdict from benchmarking:
+Tarawneh et al.\ \cite{tarawneh2022stop} review the oversampling literature and
+argue that reported gains are often artefacts of evaluation choices, and
+Sa{\u{g}}lam and Cengiz \cite{saglam2026uncertainty} observe that whether
+oversampling appears to help depends strongly on \emph{which} metric is
+consulted. Our decomposition explains where this metric dependence comes from:
+an operating-point move registers on threshold-sensitive metrics (balanced
+accuracy, recall, G-mean) while leaving ranking metrics (AUC) unchanged, so the
+verdict on oversampling is inherited from the metric's threshold sensitivity.
+We do \emph{not} claim these regularities as new; we reproduce them across our
 roster and instead \emph{explain} them: our reducibility decomposition shows the
 misclassified minority is predominantly \emph{threshold-recoverable}, which is
 \emph{why} a threshold move suffices and oversampling behaves as an implicit,
@@ -56,11 +65,11 @@ demonstrate that data-complexity metrics correlate with the accuracy gain
 oversampling delivers, and Carvalho et al.\ \cite{carvalho2025resampling} survey
 how resampler performance tracks data structure. Most directly, Jiang and Ye
 \cite{jiang2026beyond} control the imbalance ratio and show data characteristics
-moderate oversampler choice --- yet their resulting selection rule does \emph{not}
+moderate oversampler choice, yet their resulting selection rule does \emph{not}
 beat always-SMOTE, and they leave open whether a held-out, characteristic-driven
 selector can. This line is \emph{correlational}: it relates measured complexity to
 observed performance without explaining the mechanism. Our contribution is
-orthogonal --- a mechanism-level account of \emph{why} boundary generation hurts --- and we
+orthogonal (a mechanism-level account of \emph{why} boundary generation hurts), and we
 answer the open selection question directly, on a full strategy menu with held-out
 validation (\S\ref{sec:results:selection}), finding that the menu, not the
 selector, is the dominant lever. Our account is mechanism-level and
@@ -83,16 +92,50 @@ are agnostic to \emph{why} an instance is problematic, removing both
 correctable and boundary instances indiscriminately. Beyond the canonical
 family, MWMOTE \cite{barua2014mwmote}, ProWSyn \cite{barua2011prowsyn}, and
 polynomial-fitting SMOTE \cite{gazzah2008new} represent more recent
-extensions. The 85-variant survey of Kov\'acs \cite{kovacs2019smote}
+extensions. Geometric SMOTE \cite{douzas2019geometric} replaces linear
+interpolation altogether: it draws synthetic points inside a (possibly
+truncated and deformed) hypersphere around each minority seed whose radius can
+be bounded by the distance to the \emph{nearest majority} instance, an explicit
+geometric guard against generating in the other class's territory, and hence a
+design-level response to precisely the boundary-crossing mass that
+Proposition~\ref{prop:cross}(iii) identifies as the harmful quantity; we test
+it directly, on the controlled boundary and at scale
+(\S\ref{sec:results:mechanism}, \S\ref{sec:results:frontier}). The
+85-variant survey of Kov\'acs \cite{kovacs2019smote}
 provides a broader perspective; we include the top three of his ranked
 variants as baselines. Theoretically, Sakho et al.\ \cite{sakho2024rebalancing}
 show that \emph{default} SMOTE asymptotically copies minority points and that its
 synthetic density \emph{vanishes} near the boundary of the minority support; our
-boundary-crossing account is therefore specific to the \emph{overlap} regime ---
+boundary-crossing account is therefore specific to the \emph{overlap} regime:
 interpolation between minority seeds that already lie in class-overlap territory,
 where the segment crosses into majority-posterior space
-(Proposition~\ref{prop:cross}) --- and is complementary to, not in conflict with, their
+(Proposition~\ref{prop:cross}). It is complementary to, not in conflict with, their
 clean-margin analysis.
+
+\paragraph{Uncertainty-guided oversampling.}
+A distinct line replaces geometric seeding heuristics with \emph{uncertainty}
+signals that decide where to generate. Ertekin \cite{ertekin2013adaptive}
+adaptively oversamples the informative region near the decision boundary;
+CGMOS \cite{zhang2016cgmos} weights candidate seeds by the certainty change a
+synthetic point would induce on both classes; Aguiar and Cano
+\cite{aguiar2023active} allocate an active-learning budget to oversampling in
+partially labeled imbalanced streams; and Tao \cite{tao2026local} targets
+high-local-entropy regions adversarially. Closest to our decomposition,
+Sa{\u{g}}lam and Cengiz \cite{saglam2026uncertainty} separate the two
+uncertainty sources explicitly: their generator flags high-\emph{aleatoric}
+instances as noise and excludes them from seeding, then directs generation
+toward high-\emph{epistemic} instances. That design choice is operationally
+convergent with our findings, that generation seeded in the (aleatoric)
+overlap region is what harms accuracy, that excluding such seeds removes the
+harm (clean-masked SMOTE), and that only the epistemic (data-reducible) slice
+of the deficit benefits from more data. The difference is the object of study:
+these works propose \emph{new oversamplers} and evaluate them as methods,
+whereas we supply the instance-level diagnosis and the mechanism that explain
+\emph{why} aleatoric-region generation hurts
+(Proposition~\ref{prop:cross}, \S\ref{sec:results:interventional}), and our
+remedy decomposition shows the epistemic slice such methods can address is
+small ($\sim$7\% of the minority deficit) next to the threshold-recoverable
+majority ($\sim$69\%), which needs no generation at all.
 
 \paragraph{Label noise detection.}
 Confident Learning \cite{northcutt2021confident} estimates the joint
@@ -107,9 +150,9 @@ predictive uncertainty into aleatoric and epistemic components via
 ensemble-of-trees disagreement. H\"ullermeier and Waegeman
 \cite{hullermeier2021aleatoric} provide a general treatment of the
 aleatoric--epistemic distinction, and Nguyen et al.\
-\cite{nguyen2019epistemic} use it for data acquisition --- epistemic uncertainty
+\cite{nguyen2019epistemic} use it for data acquisition (epistemic uncertainty
 marks the \emph{reducible} part an extra label can resolve, aleatoric the
-irreducible part --- in an active-learning setting. We adapt this
+irreducible part) in an active-learning setting. We adapt this
 reducible-versus-irreducible logic to imbalanced learning: combined with a local
 class-ratio measure and a threshold-recoverability test, it yields the
 remedy-mapped decomposition of the misclassified minority that is our headline
@@ -121,5 +164,5 @@ of SMOTE with a progress-and-challenges review. Carvalho et al.\
 \cite{carvalho2025resampling} survey resampling approaches from a data
 perspective; their review reinforces the observation that resampler
 performance is best predicted by data structure rather than by the
-algorithmic family of the resampler --- a perspective consistent with our
+algorithmic family of the resampler, a perspective consistent with our
 exclusion-beats-targeting finding.

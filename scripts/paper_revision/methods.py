@@ -203,6 +203,21 @@ def _triage_cost_sensitive(X, y, random_state):
     return X.copy(), y.copy(), w, {"method": "triage_cost_sensitive"}
 
 
+def _gsmote(X, y, random_state):
+    # Geometric SMOTE (Douzas & Bacao 2019), the authors' maintained
+    # implementation (imbalanced-learn-extra). Defaults reproduce the paper's
+    # canonical configuration: 'combined' selection strategy (hypersphere radius
+    # bounded by the nearer of the nearest minority / nearest majority
+    # neighbour), truncation_factor=1.0, deformation_factor=0.0.
+    from imblearn_extra.gsmote import GeometricSMOTE
+    k = _safe_k(y)
+    if k == 0:
+        return X.copy(), y.copy(), None, {"method": "gsmote", "skipped": "too_few_samples"}
+    s = GeometricSMOTE(k_neighbors=k, random_state=random_state)
+    Xr, yr = s.fit_resample(X, y)
+    return Xr, yr, None, {"method": "gsmote"}
+
+
 def _napierala_weighting(X, y, random_state, mapping: str):
     from endgame.augmentation.napierala_weighter import NapieralaSampleWeighter
     w = NapieralaSampleWeighter(weight=2.0, mapping=mapping, random_state=random_state)
@@ -227,6 +242,7 @@ METHODS: dict[str, MethodFn] = {
     "polynom_fit_smote": _polynom_fit_smote,
     "prowsyn": _prowsyn,
     "mwmote": _mwmote,
+    "gsmote": _gsmote,
     "napierala_guided_smote": _napierala_guided_smote,
     "clean_masked_smote": _clean_masked_smote,
     "triage_weighting": _triage_weighting,

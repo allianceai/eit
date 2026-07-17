@@ -113,7 +113,7 @@ def table3_smote_comparison():
     df = _load_method_classifier("xgboost")
     smote_methods = [
         "smote", "borderline_smote", "adasyn", "safe_level_smote",
-        "polynom_fit_smote", "prowsyn", "mwmote",
+        "polynom_fit_smote", "prowsyn", "mwmote", "gsmote",
         "napierala_guided_smote", "clean_masked_smote",
     ]
     sub = df[df["method"].isin(["baseline"] + smote_methods)]
@@ -133,10 +133,12 @@ def table3_smote_comparison():
         )
     _emit(
         "table3_smote.tex", "tab:smote",
-        "Oversamplers vs.\\ standard SMOTE (XGBoost, "
-        f"{sub['dataset'].nunique()} datasets). Positive Mean Acc / WR Acc "
-        "above SMOTE means accuracy recovered. Only triage's "
-        "clean-masked SMOTE significantly improves accuracy over SMOTE.",
+        "Oversampler family vs.\\ standard SMOTE (XGBoost, "
+        f"{sub['dataset'].nunique()} OpenML-roster datasets): mean metric, win rate "
+        "over SMOTE, and Wilcoxon $p$. The geometric variant G-SMOTE (added at "
+        "review) buys significantly \\emph{less} balanced accuracy than SMOTE at a "
+        "comparable accuracy level; only polynom-fit (a known weak-tradeoff variant) "
+        "and the triage clean-masked variant significantly recover accuracy.",
         "lrrrrrr",
         r"Method (vs.\ SMOTE) & Mean Acc & WR Acc & $p_{\text{Acc}}$ & Mean BAcc & WR BAcc & $p_{\text{BAcc}}$",
         body,
@@ -297,7 +299,10 @@ def table_datasets(force_registry: bool = False):
         r"\begin{longtable}{lrrrrc}",
         rf"\caption{{Full dataset listing ({len(df)} datasets; the recovered "
         r"original-paper roster). $n$ = instances; $d$ = features; $C$ = classes; "
-        r"IR = imbalance ratio (majority / minority count)."
+        r"IR = imbalance ratio (majority / minority count). ``sklearn'' marks "
+        r"datasets loaded from scikit-learn rather than OpenML; \texttt{webpage}'s "
+        r"class statistics are not reported because its sparse high-dimensional "
+        r"format excludes it from the menu evaluation (\S\ref{sec:design})."
         r"}\label{tab:datasets}\\",
         r"\toprule", header, r"\midrule", r"\endfirsthead",
         r"\multicolumn{6}{l}{\tablename~\thetable\ -- continued}\\",
@@ -308,7 +313,7 @@ def table_datasets(force_registry: bool = False):
     ]
     for _, r in df.iterrows():
         oid = r["openml_id"]
-        oid_s = str(int(oid)) if isinstance(oid, (int, np.integer)) or float(oid) >= 0 else "sklearn"
+        oid_s = "sklearn" if float(oid) < 0 else str(int(oid))
         ir_s = "--" if r["ir"] != r["ir"] else f"{r['ir']:.1f}"
         c_s = "--" if int(r["n_classes"]) < 0 else str(int(r["n_classes"]))
         lines.append(

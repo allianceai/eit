@@ -1,5 +1,5 @@
 \begin{longtable}{lrrrrc}
-\caption{Full dataset listing (54 datasets; the recovered original-paper roster). $n$ = instances; $d$ = features; $C$ = classes; IR = imbalance ratio (majority / minority count).}\label{tab:datasets}\\
+\caption{Full dataset listing (54 datasets; the recovered original-paper roster). $n$ = instances; $d$ = features; $C$ = classes; IR = imbalance ratio (majority / minority count). ``sklearn'' marks datasets loaded from scikit-learn rather than OpenML; \texttt{webpage}'s class statistics are not reported because its sparse high-dimensional format excludes it from the menu evaluation (\S\ref{sec:design}).}\label{tab:datasets}\\
 \toprule
 Dataset & OpenML ID & $n$ & $d$ & $C$ & IR \\
 \midrule
@@ -37,10 +37,10 @@ Dataset & OpenML ID & $n$ & $d$ & $C$ & IR \\
 \texttt{creditcard} & 1597 & 50000 & 29 & 2 & 601.4 \\
 \texttt{webpage} & 350 & 34780 & 300 & -- & -- \\
 \texttt{solar-flare} & 40687 & 1066 & 12 & 6 & 7.7 \\
-\texttt{iris} & -1 & 150 & 4 & 3 & 1.0 \\
-\texttt{wine} & -2 & 178 & 13 & 3 & 1.5 \\
-\texttt{breast\_cancer} & -3 & 569 & 30 & 2 & 1.7 \\
-\texttt{digits} & -4 & 1797 & 64 & 10 & 1.1 \\
+\texttt{iris} & sklearn & 150 & 4 & 3 & 1.0 \\
+\texttt{wine} & sklearn & 178 & 13 & 3 & 1.5 \\
+\texttt{breast\_cancer} & sklearn & 569 & 30 & 2 & 1.7 \\
+\texttt{digits} & sklearn & 1797 & 64 & 10 & 1.1 \\
 \texttt{glass} & 41 & 214 & 9 & 6 & 8.4 \\
 \texttt{vowel} & 307 & 990 & 12 & 11 & 1.0 \\
 \texttt{letter} & 6 & 20000 & 16 & 26 & 1.1 \\

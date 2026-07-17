@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\caption{Triage-informed weighting vs.\ four Napierala-weighting mappings (XGBoost, vs.\ no-weighting baseline, 52 datasets). Win rate = fraction of datasets improved; $p$ from two-sided Wilcoxon over per-dataset means.}
+\label{tab:weighting}
+\begin{tabular}{lrrrrrr}
+\toprule
+Method & Mean Acc & WR Acc & $p_{\text{Acc}}$ & Mean BAcc & WR BAcc & $p_{\text{BAcc}}$ \\
+\midrule
+triage\_weighting & 0.8540 & 59.6\% & 0.086 & 0.7777 & 61.5\% & 0.011* \\
+napierala\_weighting\_rare & 0.8540 & 42.3\% & 0.308 & 0.7779 & 50.0\% & 0.004** \\
+napierala\_weighting\_rare\_outlier & 0.8537 & 34.6\% & 0.757 & 0.7781 & 48.1\% & 0.013* \\
+napierala\_weighting\_borderline & 0.8541 & 44.2\% & 0.221 & 0.7782 & 50.0\% & 0.004** \\
+napierala\_weighting\_nonsafe & 0.8539 & 46.2\% & 0.472 & 0.7785 & 53.8\% & 0.003** \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,6 +1,6 @@
 """Authoritative dataset roster for the Error-Instance-Triage / Bayes-boundary paper.
 
-Roster and loader restored from the original code in ``/home/cameron/endgame_backup``
+Roster and loader restored from the original study code
 (``scripts/error_triage_experiments.py``), which reproduces the paper. Datasets keep
 their NATIVE class structure (no binary collapse); categoricals are ordinal-encoded;
 data is capped at 50k rows on load. Downstream experiments apply their own stratified

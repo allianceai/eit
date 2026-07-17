@@ -2,7 +2,7 @@
 # Paper revision (v2) — run ONLY the additional experiments needed to address the
 # ECML-2026 reviews (see eit_paper_ecml_2026_feedback.md). Everything else is REUSED
 # from the original study in results/original_study/ (copied verbatim from
-# /home/cameron/endgame_backup, the authoritative code+data that produced the paper)
+# the original study archive, the authoritative code+data that produced the paper)
 # and is NOT regenerated:
 #
 #   REUSED (results/original_study/, do NOT re-run):
