@@ -1,16 +1,18 @@
 \section{Method}\label{sec:method}
 
-Figure~\ref{fig:pipeline} gives the end-to-end pipeline: a class-balanced
-out-of-bag forest ensemble supplies every model-derived signal; misclassified
-instances are triaged into three categories by an aleatoric--epistemic
-uncertainty decomposition (\S\ref{sec:method:uncert}--\ref{sec:method:triage});
+Figure~\ref{fig:pipeline} gives the end-to-end pipeline: a class-weighted
+out-of-bag forest ensemble supplies the model-derived signals; misclassified
+instances are triaged into three categories by out-of-bag confidence and
+local-representation rules whose interpretation is grounded in, and validated
+against, an aleatoric--epistemic uncertainty decomposition
+(\S\ref{sec:method:uncert}--\ref{sec:method:triage});
 the misclassified \emph{minority} is then mapped to remedies by the remedy
 decomposition (\S\ref{sec:method:remedy}); and the resulting diagnosis is
 evaluated against a 16-strategy menu (\S\ref{sec:method:menu},
 \S\ref{sec:design}). Table~\ref{tab:algorithm} states the procedure as
 pseudocode.
 
-\begin{figure}[t]
+\begin{figure}[!tp]
 \centering
 \begin{tikzpicture}[
   font=\footnotesize,
@@ -22,7 +24,7 @@ pseudocode.
 ]
 \node[stage, text width=24mm] (data) {Training split\\(stratified, $\le$10k)};
 \node[stage, right=of data, text width=32mm] (ens)
-  {Class-balanced ensemble\\$M{=}5$ RF $\times$ $T{=}100$\\(all signals OOB)};
+  {Class-weighted ensemble\\$M{=}5$ RF $\times$ $T{=}100$\\(category signals OOB)};
 \node[stage, right=of ens, text width=24mm] (err)
   {OOB error set\\$E=\{\hat{y}^{\mathrm{OOB}}_i \ne y_i\}$};
 \node[sig, below=of ens, text width=92mm] (sigs)
@@ -37,20 +39,30 @@ pseudocode.
   {Remedy decomposition of \emph{minority} errors\\
    (threshold gate at OOF $\tau^\star$, then triage; Figure~\ref{fig:remedy})};
 \node[result, right=of remedy, text width=32mm] (outp)
-  {Diagnosis + strategy-menu evaluation (\S\ref{sec:design})};
+  {Diagnosis\\(remedy shares)};
+\node[result, below=of remedy, xshift=22mm, text width=92mm] (eval)
+  {Menu evaluation (\S\ref{sec:design}), $5\times5$ stratified CV: strategy +
+   threshold fit on \emph{training} folds $\to$ learner fit $\to$ \emph{held-out}
+   test predictions $\to$ default/tuned decisions $\to$ metrics};
 \draw[->] (data) -- (ens);
 \draw[->] (ens) -- (err);
 \draw[->] (err.south) -- (err.south |- sigs.north);
 \draw[->] (sigs) -- (triage);
 \draw[->] (triage.south -| remedy.north) -- (remedy.north);
 \draw[->] (remedy) -- (outp);
+\draw[->] (outp.south) -- (outp.south |- eval.north);
 \end{tikzpicture}
-\caption{End-to-end pipeline. Every model-derived signal (error set, true-class
-probability, uncertainty decomposition) comes from out-of-bag predictions of a
-class-balanced random-forest ensemble; errors are triaged into three categories;
+\caption{End-to-end pipeline. Every signal that drives the categorization (error
+set, true-class probability, noise consensus) comes from out-of-bag predictions
+of a class-weighted random-forest ensemble (the uncertainty values of
+Eq.~\eqref{eq:uncertainty} interpret the categories and are recomputed fully
+held-out in \appref{app:oof}); errors are triaged into three categories;
 the misclassified minority is mapped to remedies via the threshold-recoverability
-gate of \S\ref{sec:method:remedy}; the diagnosis is then evaluated against the
-16-strategy menu.}
+gate of \S\ref{sec:method:remedy}. The diagnosis is then evaluated against the
+16-strategy menu under the protocol of \S\ref{sec:design}: $5\times5$ stratified
+cross-validation in which each strategy (resampling, weighting, or
+threshold-moving) and any tuned threshold are fit on the training folds only,
+and all reported metrics come from the held-out test folds.}
 \label{fig:pipeline}
 \end{figure}
 
@@ -73,7 +85,8 @@ is the ensemble-averaged prediction and $H[\cdot]$ denotes Shannon entropy.
 The ensemble size follows standard deep-ensemble practice ($M{=}5$,
 \cite{lakshminarayanan2017simple}); a sensitivity analysis over
 $M \in \{1,2,5,10,20\}$ shows the resulting categorization and remedy shares
-are stable for $M \ge 5$ (\appref{app:msens}), and \appref{app:nontree}
+are stable for $M \ge 5$ (category fractions move $\le 2.6$\,pp between $M{=}5$
+and $M{=}20$; \appref{app:msens}), and \appref{app:nontree}
 re-derives the full decomposition with bagged non-tree ensembles (MLPs,
 logistic regression), with the headline unchanged.
 
@@ -104,7 +117,11 @@ ensemble majority vote disagrees with its label; the true-class probability (TCP
 confidence and consensus. The remaining signals (the local class ratio) are
 properties of the data geometry, not model predictions. The error set and its
 categories are therefore \emph{not} in-sample artefacts of forests fit and scored
-on the same data. As a strict check we additionally re-derive the categories under
+on the same data. One quantity is scoped differently: the aleatoric/epistemic
+values of Eq.~\eqref{eq:uncertainty} are computed over all trees of the fitted
+instrument (in-bag included); they do not enter the category rules of
+\S\ref{sec:method:triage}, serving as interpretation and validation, and the
+strict check below recomputes them fully held-out. As a strict check we additionally re-derive the categories under
 inner cross-validation (forests fit on inner-training folds categorize held-out
 instances, so even the aleatoric/epistemic decomposition is out-of-fold); the
 category distribution and the aleatoric/epistemic separation are essentially
@@ -131,9 +148,20 @@ data gap); high values indicate adequate local representation despite the error
   ``Bayes boundary'' for the controlled experiments of \S\ref{sec:results:mechanism}
   where it is known; on real data Cat\,3 is an \emph{estimate} of that region.)
 \end{description}
+The rules are deliberately operational --- ensemble confidence (TCP) and local
+representation --- rather than thresholds on the uncertainty values of
+Eq.~\eqref{eq:uncertainty} themselves; the aleatoric--epistemic decomposition
+supplies the \emph{interpretation} of the resulting categories, and the held-out
+validation confirms it (Cat\,3 aleatoric uncertainty exceeds Cat\,2's on $80\%$
+of datasets, \appref{app:oof}).
+
 To remove the imbalance bias of an off-the-shelf ensemble (a majority-biased
 ensemble suppresses minority TCP and over-flags minority instances as noise), the
-ensemble uses class-balanced bootstrap sampling when computing the triage.
+triage ensemble is trained with class-balanced instance weights (inverse class
+frequency). Forest probability estimates respond only weakly to such weights
+(\S\ref{sec:results:frontier}), and the \emph{unweighted} bagged instruments of
+\appref{app:nontree} reproduce the decomposition, so the headline does not hinge
+on this choice.
 
 The two thresholds are fixed at $\tau_{\text{noise}}=0.12$, $\tau_{\text{cat2}}=0.4$
 across \emph{all} datasets; they are defaults, not tuned hyperparameters. The
@@ -147,16 +175,31 @@ the category assignments preserve their relative structure throughout
 
 The triage characterizes \emph{why} an instance is hard; our central instrument
 turns this into \emph{which remedy applies} to the instances that actually drive
-the deficit --- the misclassified minority. For each minority instance that the
-ensemble misclassifies at the default threshold (out-of-bag $\Pr(\text{minority})
-<\tfrac12$), we ask, in order:
+the deficit --- the misclassified minority. Two instrument choices matter here
+and we state them explicitly. First, the deficit being decomposed is that of the
+\emph{default, off-the-shelf} model, so the decomposition is measured on the
+\emph{unweighted} ensemble; the class-weighted variant of
+\S\ref{sec:method:triage} partially enacts the operating-point shift inside the
+instrument, leaving a harder residue, and is reported as a sensitivity
+(\S\ref{sec:results:remedy}). Second, the error set is the ensemble's
+\emph{actual} default prediction: a minority instance is a default error iff the
+out-of-bag argmax over its mean probability vector differs from its label (on
+binary tasks this coincides with $\Pr(\text{minority})<\tfrac12$; on multiclass
+tasks the two differ, and the argmax definition is the valid one). For each such
+error we ask, in order:
 \begin{description}
-\item[\textbf{Threshold-recoverable:}] is it classified \emph{correctly} once the
-  decision threshold is moved to the value $\tau^\star$ that maximizes balanced
-  accuracy on out-of-fold predictions (i.e.\ $\Pr(\text{minority})\ge\tau^\star$)?
-  Then the model already \emph{ranks} it correctly and only the default cutoff was
-  wrong: the remedy is to move the threshold, no data required. This axis,
-  which conditions on rank-correctness of an already-misclassified instance, is
+\item[\textbf{Threshold-recoverable:}] is it classified \emph{correctly} under
+  the decision-rule intervention that predicts the focal minority class whenever
+  $\Pr(\text{minority})\ge\tau^\star$ and otherwise the highest-scoring remaining
+  class (a one-vs-rest threshold move, valid for binary and multiclass alike),
+  where $\tau^\star$ maximizes minority-vs-rest balanced accuracy? The threshold
+  is \emph{cross-fitted}: instances are split into five stratified folds, and
+  each instance's recovery is judged with a $\tau^\star$ selected on the other
+  folds only, so no recovery decision uses a threshold chosen on that instance.
+  If recovered, the model's score already places it on the minority side of the
+  tuned operating point and only the default cutoff was wrong: the remedy is to
+  change the decision rule, no data and no refitting required. This axis, which
+  conditions on score-recoverability of an already-misclassified instance, is
   what distinguishes our decomposition from difficulty taxonomies.
 \item[\textbf{Data-reducible (epistemic):}] otherwise, if the instance is Cat\,2
   (locally under-represented, high epistemic uncertainty), the remedy is more
@@ -166,9 +209,10 @@ ensemble misclassifies at the default threshold (out-of-bag $\Pr(\text{minority}
   recovers it. On real data this is an \emph{estimated}-irreducible, aleatoric
   residue, not a proven Bayes-irreducible one.
 \end{description}
-(Cat\,1 noise is reported separately.) The threshold $\tau^\star$ and the
-$\Pr(\text{minority})$ used here are out-of-bag, so the decomposition is not an
-in-sample artefact (\appref{app:oof}). This three-way, remedy-mapped split
+(Cat\,1 noise is reported separately.) The $\Pr(\text{minority})$ scores used
+here are out-of-bag with respect to model fitting, and $\tau^\star$ is
+cross-fitted as above, so the decomposition is held out from both model fitting
+and threshold selection (\appref{app:oof}). This three-way, remedy-mapped split
 of the \emph{minority error population} is the paper's headline diagnostic; its
 empirical shape (\S\ref{sec:results:remedy}) explains why a threshold move recovers
 most of the deficit and identifies the minority of cases where data genuinely helps.
@@ -185,9 +229,9 @@ still counted \emph{threshold-recoverable} whenever the model ranks it above
 $\tau^\star$: the default $\tfrac12$ cutoff was wrong, but the \emph{ranking} is
 right. The irreducible remedy class therefore contains only the Cat\,3 minority
 errors that remain misclassified \emph{after} the threshold move, a strict subset
-of Cat\,3. This is why the irreducible remedy fraction ($\sim$16\% of the minority
+of Cat\,3. This is why the irreducible remedy fraction ($\sim$17\% of the minority
 deficit, \S\ref{sec:results:remedy}) is far below the Cat\,3 share of all errors
-($\sim$85\%, \S\ref{sec:results:interventional}): most boundary errors are ranked
+($\sim$85\%, \S\ref{sec:results:interventional}): most boundary errors are scored
 well enough to be recovered by moving the decision, not by adding or accepting data.
 
 \begin{figure}[t]
@@ -203,12 +247,12 @@ well enough to be recovered by moving the decision, not by adding or accepting d
 ]
 \node[box, fill=black!4, text width=46mm] (err)
   {Misclassified minority error\\[1pt]{\footnotesize Cat\,3 $\approx 85\%$ of \emph{all} errors}};
-\node[q, below=6mm of err] (q1) {ranks above $\tau^\star$?};
-\node[rem, left=16mm of q1] (tr) {\textbf{Threshold-}\\\textbf{recoverable}\\$69\%$};
+\node[q, below=6mm of err] (q1) {scores above $\tau^\star$?};
+\node[rem, left=16mm of q1] (tr) {\textbf{Threshold-}\\\textbf{recoverable}\\$68\%$};
 \node[q, below=9mm of q1] (q2) {triage\\category};
-\node[cat, below=12mm of q2] (c3) {\textbf{Irreducible}\\Cat\,3, aleatoric\\$16\%$};
-\node[cat, left=7mm of c3] (c2) {\textbf{Data-reducible}\\Cat\,2, epistemic\\$7\%$};
-\node[cat, right=7mm of c3] (c1) {Noise\\Cat\,1\\$7\%$};
+\node[cat, below=12mm of q2] (c3) {\textbf{Irreducible}\\Cat\,3, aleatoric\\$17\%$};
+\node[cat, left=7mm of c3] (c2) {\textbf{Data-reducible}\\Cat\,2, epistemic\\$6\%$};
+\node[cat, right=7mm of c3] (c1) {Noise\\Cat\,1\\$9\%$};
 \draw[->] (err) -- (q1);
 \draw[->] (q1) -- node[above,lbl]{yes} (tr);
 \draw[->] (q1) -- node[right,lbl]{no} (q2);
@@ -218,12 +262,12 @@ well enough to be recovered by moving the decision, not by adding or accepting d
 \end{tikzpicture}
 \caption{How the misclassified minority filters into the three remedy classes. The
 decomposition asks threshold-recoverability \emph{first}: an error the model already
-ranks above the tuned threshold $\tau^\star$ is \emph{threshold-recoverable} whatever
-its triage category. Only the residue is split by triage into data-reducible
+scores above the cross-fitted threshold $\tau^\star$ is \emph{threshold-recoverable}
+whatever its triage category. Only the residue is split by triage into data-reducible
 (Cat\,2), irreducible (Cat\,3), or noise (Cat\,1). Because most boundary (Cat\,3)
-errors are well-ranked, the \emph{irreducible} remedy class ($16\%$) is a strict
-subset of Cat\,3 (which is itself $\sim$85\% of \emph{all} errors), which is why
-$16\% \ll 85\%$. Percentages are means over datasets (Table~\ref{tab:reducibility}).}
+errors are well-scored, the \emph{irreducible} remedy class ($17\%$) is a strict
+subset of Cat\,3 (which is itself $\sim$85\% of \emph{all} errors, \S\ref{sec:results:interventional}), which is why
+$17\% \ll 85\%$. Percentages are means over datasets (Table~\ref{tab:reducibility}).}
 \label{fig:remedy}
 \end{figure}
 
@@ -240,7 +284,7 @@ fit and scored on the same data.}
   $\tau_{\text{noise}}{=}0.12$, $\tau_{\text{cat2}}{=}0.4$; $M{=}5$, $T{=}100$, $k$} \\
 \multicolumn{2}{@{}l}{\textbf{Output:} triage categories; remedy shares of the minority deficit} \\
 \midrule
-1 & Fit $M$ random forests ($T$ trees each, class-balanced bootstrap); for each
+1 & Fit $M$ random forests ($T$ trees each, class-balanced instance weights); for each
     $\mathbf{x}_i$ collect the OOB tree probabilities $\hat{p}_{m,t}(\mathbf{x}_i)$
     and their mean $\bar{p}(\mathbf{x}_i)$. \\
 2 & Error set $E \leftarrow \{i : \text{OOB majority vote} \ne y_i\}$. \\

@@ -2,9 +2,9 @@
 
 \paragraph{The tradeoff is a decision problem, not a data problem.} Our central
 finding is that the minority-class deficit \emph{decomposes by remedy} and is
-predominantly \emph{threshold-recoverable}: across 79 datasets a mean of $69\%$ of
-minority errors ($74\%$ at $\mathrm{IR}>3$) are corrected by moving the decision
-threshold alone, with only $\sim$7\% data-reducible and $\sim$16\% irreducible.
+predominantly \emph{threshold-recoverable}: across 79 datasets a mean of $68\%$ of
+minority errors ($80\%$ at $\mathrm{IR}>3$) are corrected by moving the decision
+threshold alone, with only $\sim$6\% data-reducible and $\sim$17\% irreducible.
 This explains a regularity the field has documented but not explained, namely that
 resampling leaves ranking (AUC) unchanged and a threshold shift reproduces its
 benefit without synthetic generation and without shifting the probability scale
@@ -106,4 +106,12 @@ the documented exception (its ranking, not just its threshold, degrades under
 imbalance), which delimits the account's scope and motivates the deep extension
 sketched above. (iv) The regime map is descriptive: a depth-3 rule does not beat
 ``always use a balanced ensemble,'' so the map informs rather than automates the
-choice.
+choice. (v) The triage's geometry signals (the local class ratio and the
+neighbour-based noise signal) use Euclidean $k$-NN on the loaded feature matrix,
+with categoricals ordinal-encoded and no standardization; the forest-derived
+signals are scale-invariant, but the $k$-NN signals are not, so the
+Cat\,2/Cat\,3 boundary can in principle depend on feature units. The threshold
+sweep of \appref{app:sensitivity} covers part of this axis
+($\tau_{\text{cat2}}\in[0.2,0.6]$ leaves downstream conclusions stable), but a
+fully unit-invariant geometry (standardized or mixed-type distances) is a
+worthwhile robustness extension.

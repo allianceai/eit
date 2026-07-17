@@ -51,8 +51,10 @@ placed, rather than to rebalancing per se.
 
 To localize this boundary/overlap region on real data we introduce \textbf{Error
 Instance Triage}, which categorizes each misclassified training instance from
-\emph{out-of-bag} random-forest predictions via an aleatoric--epistemic
-uncertainty decomposition \cite{shaker2020aleatoric,hullermeier2021aleatoric}.
+\emph{out-of-bag} random-forest confidence and local class representation; the
+categories are interpreted through, and validated against, an
+aleatoric--epistemic uncertainty decomposition
+\cite{shaker2020aleatoric,hullermeier2021aleatoric}.
 We state the scope plainly: the triage \emph{instrument} is computed from
 random-forest ensembles (the standard vehicle for this decomposition
 \cite{shaker2020aleatoric}), while the downstream conclusions are evaluated
@@ -86,8 +88,9 @@ accuracy cost.
 We make this precise with a \emph{remedy decomposition} of the misclassified
 minority that sorts each error into threshold-recoverable, data-reducible
 (epistemic), or irreducible (aleatoric). We find the deficit is overwhelmingly
-\textbf{threshold-recoverable} (mean $69\%$ across 79 datasets, $74\%$ at
-$\mathrm{IR}>3$): the classifier already ranks these instances correctly. The known
+\textbf{threshold-recoverable} (mean $68\%$ across 79 datasets, $80\%$ at
+$\mathrm{IR}>3$): the classifier's scores already place these instances above a
+tuned operating point. The known
 ``move the threshold'' equivalence
 \cite{provost2000imbalanced,elkan2001foundations,elor2022smote,goorbergh2022harm}
 is the consequence: across a 16-strategy menu oversampling yields no ranking gain
@@ -103,8 +106,9 @@ strategies, while a strong non-generative default is itself near-optimal.
 \paragraph{Contributions.}
 \begin{enumerate}
 \item \textbf{A remedy decomposition of the minority deficit (headline).} We
-  decompose the \emph{misclassified} minority by combining an
-  aleatoric--epistemic uncertainty decomposition with a threshold-recoverability
+  decompose the \emph{misclassified} minority by combining an error triage
+  (out-of-bag confidence and local representation, validated against an
+  aleatoric--epistemic uncertainty decomposition) with a threshold-recoverability
   test, mapping each error to the remedy that would fix it:
   \emph{threshold-recoverable}, \emph{data-reducible} (epistemic), or
   \emph{irreducible} (aleatoric). Unlike prior
@@ -112,7 +116,7 @@ strategies, while a strong non-generative default is itself near-optimal.
   \cite{napierala2016types,smith2014instance,swayamdipta2020dataset,seedat2022dataiq},
   ours conditions on the model being wrong and introduces the threshold-recoverable
   axis. Empirically the deficit is overwhelmingly threshold-recoverable
-  ($69\%$ on average, $74\%$ at $\mathrm{IR}>3$).
+  ($68\%$ on average, $80\%$ at $\mathrm{IR}>3$).
 \item \textbf{A mechanism behind the ``move the threshold'' equivalence.} The
   decomposition \emph{explains} a known regularity (that resampling does not
   improve ranking and a threshold shift reproduces its benefit

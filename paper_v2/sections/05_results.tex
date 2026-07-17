@@ -70,43 +70,63 @@ predictive. $^{*}$: $p<0.05$.}
 
 \subsection{The minority deficit is mostly threshold-recoverable}\label{sec:results:remedy}
 
-\paragraph{Result.} We apply the remedy decomposition (\S\ref{sec:method:remedy})
+\paragraph{Result.}
+We apply the remedy decomposition (\S\ref{sec:method:remedy})
 to the misclassified minority on every dataset (Table~\ref{tab:reducibility}).
-Across the 70 datasets with a non-trivial minority error set, the deficit is
-\textbf{predominantly threshold-recoverable}: a mean of $\mathbf{69\%}$ (median
-$75\%$) of minority errors are corrected simply by moving the decision threshold to
-its out-of-fold balanced-accuracy optimum: the model already \emph{ranked} these
-instances correctly. Only $7\%$ are data-reducible (epistemic, where more
-same-class data would help), $16\%$ are irreducible (aleatoric, model-estimated
-overlap), and $7\%$ are noise. The pattern \emph{sharpens} with imbalance: on
-$\mathrm{IR}>3$ datasets $74\%$ of the deficit is threshold-recoverable. This is
+Across the 67 datasets with a non-trivial minority error set ($\ge5$ default
+errors), the deficit is
+\textbf{predominantly threshold-recoverable}: a mean of $\mathbf{68\%}$ (median
+$75\%$) of minority errors are corrected by the cross-fitted threshold move
+alone: these instances' scores already sit
+above the tuned operating point. Only $6\%$ are data-reducible (epistemic, where more
+same-class data would help), $17\%$ are irreducible (aleatoric, model-estimated
+overlap), and $9\%$ are noise; threshold-recoverable is the largest remedy class
+on $84\%$ of datasets. The pattern \emph{sharpens} with imbalance: on
+$\mathrm{IR}>3$ datasets $80\%$ of the deficit is threshold-recoverable. This is
 corroborated independently by separability: on the 30 hardest binary datasets
 (baseline balanced accuracy $<0.85$) the baseline classifier's out-of-fold AUC is a
 median of $0.91$ ($93\%$ exceed $0.70$). The classes are well ranked even where
 default-threshold balanced accuracy is poor. (The genuine exceptions, AUC
-$\approx0.59$, are the near-irreducible problems.) The result is also not an
+$\approx0.59$, are the near-irreducible problems.)
+
+\paragraph{Instrument sensitivity.} Measuring the decomposition on the
+\emph{class-weighted} ensemble of \S\ref{sec:method:triage} instead lowers the
+threshold-recoverable share to $57\%$ ($67\%$ at $\mathrm{IR}>3$), for the reason
+\S\ref{sec:method:remedy} anticipates: the weights pre-enact part of the
+operating-point shift inside the instrument, so its surviving default errors are
+the post-shift residue. Threshold-recoverable remains the largest remedy class
+under both instruments. Standardizing features before the $k$-NN geometry
+signals leaves the decomposition essentially unchanged ($57.5\%$ vs $57.4\%$ on
+the weighted instrument), addressing the unit-dependence concern of
+\S\ref{sec:discussion} limitation (v). The result is also not an
 artefact of the random-forest instrument: re-deriving the full decomposition
-with bagged MLP and bagged logistic-regression ensembles leaves the
-threshold-recoverable share at $69\%$ and $68\%$ respectively ($77\%$ at
-$\mathrm{IR}>3$ for both; \appref{app:nontree}).
+with bagged MLP and bagged logistic-regression ensembles under identical
+definitions keeps threshold-recoverable the dominant remedy class at $62\%$
+and $63\%$ respectively ($73\%$ at $\mathrm{IR}>3$ for both), with per-dataset
+correlations of $r=0.78$ and $0.72$ against the forest instrument
+(\appref{app:nontree}).
 
 \paragraph{Consistency with Cat\,3 dominating the errors.} The $\sim$85\% Cat\,3
-share reported below (\S\ref{sec:results:interventional}) and the $16\%$ irreducible
+share reported below (\S\ref{sec:results:interventional}) and the $17\%$ irreducible
 fraction here are not in tension (\S\ref{sec:method:remedy}). Cat\,3 is a triage
 label for errors in the estimated overlap region under the \emph{default} decision
 rule, computed over \emph{all} errors; the remedy decomposition then asks, for the
 \emph{minority} errors only, whether that default-threshold mistake survives a move
-to the tuned operating point $\tau^\star$. Because the classifier ranks most of
+to the tuned operating point $\tau^\star$. Because the classifier scores most of
 these boundary errors above $\tau^\star$, they are counted threshold-recoverable,
 and only the residue the threshold move cannot rescue is counted irreducible, a
 strict subset of the minority Cat\,3 errors, not the whole category.
 
 \begin{table}[t]
 \centering
-\caption{Remedy decomposition of the misclassified minority (mean over datasets,
-out-of-bag): the fraction of minority errors that are threshold-recoverable (a
-threshold move corrects them), data-reducible (epistemic; more minority data
-helps), irreducible (aleatoric; model-estimated overlap), or noise. The deficit is
+\caption{Remedy decomposition of the misclassified minority (mean over the 67
+datasets of the 79-dataset roster with $\ge5$ minority default errors). Default
+errors are the ensemble's out-of-bag argmax mistakes; recovery is judged under a
+cross-fitted threshold (\S\ref{sec:method:remedy}); the instrument is the
+unweighted ensemble (class-weighted sensitivity in the text). Columns: fraction
+of minority errors that are threshold-recoverable (the decision-rule move
+corrects them), data-reducible (epistemic; more minority data helps),
+irreducible (aleatoric; model-estimated overlap), or noise. The deficit is
 predominantly a thresholding artefact, increasingly so with imbalance.}
 \label{tab:reducibility}
 \input{tables/table_reducibility.tex}
@@ -259,9 +279,10 @@ ordering \emph{reverses} (balanced Brier: baseline $0.205$, SMOTE $0.169$,
 Safe-Level $0.160$), because oversampling inflates the minority-side
 probabilities that the baseline leaves under-confident. Both verdicts describe
 the same event: resampling shifts the effective class prior in probability
-space. That is a \emph{prior shift}, not a calibration improvement --- it can be
-reproduced without data generation by reweighting or by moving the threshold
-(Table~\ref{tab:parity}), and undone by post-hoc recalibration
+space. That is a \emph{prior shift}, not a calibration improvement --- the shift
+itself is reproduced without data generation by reweighting, the decisions it
+licenses are reproduced by threshold-moving with the probability scale left
+intact (Table~\ref{tab:parity}), and it is undone by post-hoc recalibration
 \cite{dalpozzolo2015calibrating,goorbergh2022harm,carriero2025harms}. Whatever
 balanced-accuracy SMOTE buys is therefore an operating-point move, not a better
 classifier.
@@ -288,6 +309,10 @@ and not significant by the signed-rank test on logistic regression ($p{=}0.09$;
 the bootstrap CI on the mean, $[-0.93,-0.04]$, marginally excludes zero) or SVM
 ($-0.10$\,pp, $p{=}0.4$); part of this residual is a selection asymmetry (the generative family
 takes a maximum over five members, the non-generative over four or fewer). The
+best-vs-best family contrast is a summary statistic; the primary contrasts are the
+direct pairwise ones above --- tuned threshold-moving against tuned SMOTE and
+tuned G-SMOTE, each a paired per-dataset difference with confidence interval and
+win rate --- which involve no per-dataset selection. The
 sub-$1$\,pp edge comes
 with \emph{no} ranking gain and a prior shift rather than a calibration gain
 (above), against a
@@ -321,7 +346,7 @@ itself, so resampling is \emph{not} reducible to a threshold move. (The
 comparison also carries a structural caveat: MLPClassifier supports no class
 weighting, so the non-generative family on this axis is threshold-moving alone.)
 Notably, \emph{bagging} MLPs restores the ranking --- the bagged-MLP instrument
-of \appref{app:nontree} reproduces the $69\%$ threshold-recoverable share ---
+of \appref{app:nontree} reproduces the headline threshold-recoverable share ---
 so the exception is specific to single undertrained networks. This is exactly
 the regime our deep-learning discussion (\S\ref{sec:discussion}) anticipates,
 and we state the scope plainly: the operating-point account holds where the

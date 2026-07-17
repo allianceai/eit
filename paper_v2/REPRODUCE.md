@@ -25,14 +25,16 @@ training split only.
 |---|---|---|
 | Triage features (Cat1/2/3 etc.) | `build_meta_features.py` (reads cached `triage_features.parquet`) | `meta_features.parquet` |
 | §5.1 Triage validation (synthetic + semi-synthetic) | `run_synthetic_validation.py` | `synthetic_validation.parquet` |
-| §5.2 Mechanism, **Fig. overlap** | `run_overlap_synthetic.py` | `overlap_synthetic.parquet`, `figures/fig_overlap.pdf` |
-| §5.3 Interventional causal (p<0.001), **Fig. interventional** | `run_interventional.py` | `interventional.parquet`, `figures/fig1_interventional.pdf` |
-| §5.4 Full-menu benchmark (16 strategies) | SMOTE family/baseline reused from `{keel,main}_benchmark/`; non-generative via `run_frontier.py --roster {keel,original}` | `frontier_benchmark/` |
-| §5.4 Dominance + **Fig. frontier**, **Table frontier** | `build_frontier.py` | `figures/fig_frontier.pdf` |
-| §5.4 **CD diagram** (Friedman–Nemenyi), mediation, separability AUC | `build_credibility.py` | `figures/fig_cd.pdf`, `separability_auc.parquet` |
-| §5.4 Base-learner robustness (RF, LogReg) | `run_frontier_clf.py --classifier {rf,logreg}` then `build_robustness_artifacts.py` | `frontier_benchmark/{rf,logreg}/`, `baselearner_dominance_*.parquet` |
-| §5.5 **Regime map**, **Fig. regime** | `build_regime_map.py` | `figures/fig_regime_map.pdf`, `regime_map_*.parquet` |
-| §5.6 Selection + **Table selection** | `meta_selection.py --menu full --metric {balanced_accuracy,g_mean,mcc} [--features {all,core,triage}]` | `meta_selection_full_*.parquet` |
+| §5.2 Remedy decomposition (headline), **Table 3** | `build_reducibility.py` (v1, published) / `build_reducibility_v2.py` (argmax error set + cross-fitted tau; see 2026-07 revision notes) | `reducibility.parquet` / `reducibility_v2.parquet`, `tables/table_reducibility.tex` |
+| §5.3 Mechanism, **Fig. overlap** | `run_overlap_synthetic.py` | `overlap_synthetic.parquet`, `figures/fig_overlap.pdf` |
+| §5.4 Interventional causal (p<0.001), **Fig. interventional** | `run_interventional.py` | `interventional.parquet`, `figures/fig1_interventional.pdf` |
+| §5.5 Full-menu benchmark (16 strategies) | SMOTE family/baseline reused from `{keel,main}_benchmark/`; non-generative via `run_frontier.py --roster {keel,original}` | `frontier_benchmark/` |
+| §5.5 Dominance + **Fig. frontier**, **Table frontier** | `build_frontier.py` | `figures/fig_frontier.pdf` |
+| §5.5 **CD diagram** (Friedman–Nemenyi), mediation, separability AUC | `build_credibility.py` | `figures/fig_cd.pdf`, `separability_auc.parquet` |
+| §5.5 Base-learner robustness (RF, LogReg) | `run_frontier_clf.py --classifier {rf,logreg}` then `build_robustness_artifacts.py` | `frontier_benchmark/{rf,logreg}/`, `baselearner_dominance_*.parquet` |
+| §5.5 Threshold parity + probability metrics, **Tables parity/metrics** | `run_threshold_parity.py` then `build_threshold_parity.py` | `threshold_parity_v2/`, `tables/table_parity.tex`, `tables/table_metrics.tex` |
+| §5.6 **Regime map**, **Fig. regime** | `build_regime_map.py` | `figures/fig_regime_map.pdf`, `regime_map_*.parquet` |
+| §5.7 Selection + **Table selection** | `meta_selection.py --menu full --metric {balanced_accuracy,g_mean,mcc} [--features {all,core,triage}]` | `meta_selection_full_*.parquet` |
 
 ## Revision experiments (Neurocomputing review, 2026-07)
 
@@ -47,6 +49,19 @@ implementation).
 | R11/R5 parity v2: balanced Brier/ECE, gsmote, mlp/nb/svm learners | `run_threshold_parity.py --roster keel` | `threshold_parity_v2/` |
 | R5 non-tree remedy decomposition | `run_reducibility_nontree.py` | `reducibility_nontree.parquet` |
 | R6 ensemble-size (M) sensitivity | `run_m_sensitivity.py` | `m_sensitivity.parquet` |
+
+## Post-review corrections (external methodological review, 2026-07)
+
+| Issue | Script | Output |
+|---|---|---|
+| Multiclass-valid error set (OOB argmax) + cross-fitted tau | `build_reducibility_v2.py --workers 8` | `reducibility_v2.parquet` (diagnostic columns reproduce v1 exactly) |
+| Unweighted-instrument robustness | `build_reducibility_v2.py --noise-mode global` | `reducibility_v2_global.parquet` |
+| Standardized k-NN geometry robustness | `build_reducibility_v2.py --standardize` | `reducibility_v2_std.parquet` |
+
+Roster note: OpenML id 1018 is `ipums_la_99-small` (8844x56), not the classic
+937x49 oil-spill set, and id 40474 is `thyroid-allbp` (2800x26), not ann-thyroid.
+Internal result keys keep the old names (`oil_spill`, `thyroid`); the paper's
+dataset table shows the true names.
 
 ## Headline numbers (verified)
 

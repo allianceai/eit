@@ -1,27 +1,25 @@
 Class imbalance is overwhelmingly handled by oversampling, yet SMOTE-family methods
 typically trade majority-class accuracy for minority-class recall, and it is rarely
-clear \emph{why} oversampling helps. We introduce a \emph{remedy
-decomposition} of the misclassified minority: combining an aleatoric--epistemic
-uncertainty decomposition with a threshold-recoverability test, each minority error
-is assigned to the remedy that would fix it: \emph{threshold-recoverable} (the
-model already ranks it correctly; only the default cutoff is wrong),
-\emph{data-reducible} (more same-class data would help), or \emph{irreducible}
-(genuine class overlap). Across 79 real datasets the deficit is overwhelmingly
-threshold-recoverable (mean $69\%$; $74\%$ at imbalance ratio $>3$); only
-$\sim$7\% is data-reducible and $\sim$16\% irreducible. This explains a known but
-unexplained regularity: SMOTE-family resampling does not improve ranking (AUC is
-unchanged) and a threshold move reproduces its benefit without synthetic
+clear \emph{why} oversampling helps. We introduce a \emph{remedy decomposition} of
+the misclassified minority: an out-of-bag error triage (ensemble confidence and
+local class representation, validated against an aleatoric--epistemic uncertainty
+decomposition) is combined with a threshold-recoverability test, assigning each
+minority error to the remedy that would fix it: \emph{threshold-recoverable} (its
+score already clears the tuned decision threshold; only the default cutoff is
+wrong), \emph{data-reducible} (more same-class data would help), or
+\emph{irreducible} (genuine class overlap). Across 79 real datasets the deficit is
+predominantly threshold-recoverable (mean $68\%$; $80\%$ at imbalance ratio $>3$);
+only $\sim$6\% is data-reducible and $\sim$17\% irreducible. This explains a known
+but unexplained regularity: SMOTE-family resampling does not improve ranking (AUC
+is unchanged) and a threshold move reproduces its benefit without synthetic
 generation; single undertrained neural networks, whose ranking imbalance itself
-corrupts, are the exception. Because the deficit
-is mostly a thresholding artefact,
-such oversampling is at best an implicit, inefficient enactment of a threshold
-shift. We give the
-mechanism. On controlled mixtures with a \emph{known} Bayes boundary, standard SMOTE
-places an overlap-dependent fraction of synthetic points \emph{across} it; a short
-proposition shows why interpolating boundary seeds crosses into majority-posterior
-space. Empirically, once every strategy receives the same out-of-fold threshold
-tuning, the large default-threshold gap between non-generative and generative
-families collapses to within $\pm1$\,pp across three base learners (against a
-$+6.4$\,pp effect from tuning the threshold alone), so the SMOTE family's apparent
-edge is an operating-point effect, not a discrimination gain. The practical conclusion:
-diagnose the deficit; for most of it, move the decision rather than oversample.
+corrupts, are the exception. We give the mechanism: on controlled mixtures with a
+\emph{known} Bayes boundary, standard SMOTE places an overlap-dependent fraction of
+synthetic points \emph{across} it, and a short proposition shows why interpolating
+boundary seeds crosses into majority-posterior space. Once every strategy receives
+the same out-of-fold threshold tuning, the default-threshold gap between
+non-generative and generative families collapses to within $\pm1$\,pp across three
+base learners (against $+6.4$\,pp from tuning the threshold alone): the SMOTE
+family's apparent edge is an operating-point effect, not a discrimination gain. The
+practical conclusion: diagnose the deficit; for most of it, move the decision
+rather than oversample.

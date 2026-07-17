@@ -60,9 +60,11 @@ from scripts.paper_revision.config import (RESULTS_DIR, TRIAGE_PARAMS,
 from scripts.paper_revision.cv_runner import _stratified_subsample
 from scripts.paper_revision.build_reducibility import _best_tau_bacc, _all_items
 
-OUT_DIR = RESULTS_DIR / "reducibility_nontree"
-COMBINED = RESULTS_DIR / "reducibility_nontree.parquet"
-RF_COMBINED = RESULTS_DIR / "reducibility.parquet"
+# v2 dirs (post external review: argmax error set + cross-fitted tau).
+# v1-definition results remain in reducibility_nontree/ + .parquet.
+OUT_DIR = RESULTS_DIR / "reducibility_nontree_v2"
+COMBINED = RESULTS_DIR / "reducibility_nontree_v2.parquet"
+RF_COMBINED = RESULTS_DIR / "reducibility_v2_global.parquet"
 INSTRUMENTS = ["mlp_bag", "logreg_bag"]
 N_MEMBERS = 25
 CELL_TIMEOUT_S = 2400
@@ -182,14 +184,17 @@ def _decompose_nontree(instrument, name, benchmark, X, y):
         else:
             cats[i] = "irreducible"
 
-    # remedy decomposition (identical logic to build_reducibility._decompose)
+    # remedy decomposition (v2 definitions, identical to build_reducibility_v2:
+    # argmax-based multiclass-valid error set + cross-fitted tau)
+    from scripts.paper_revision.build_reducibility_v2 import _crossfit_recovered
     p_min = mean_p[:, minority]
     is_min = (y == minority).astype(int)
-    tau = _best_tau_bacc(p_min, is_min)
-    err_default = is_min.astype(bool) & (p_min < 0.5)
+    tau = _best_tau_bacc(p_min, is_min)          # in-sample tau (diagnostic only)
+    err_default = is_min.astype(bool) & err      # argmax-wrong minority instances
     n_err = int(err_default.sum())
-    recovered = err_default & (p_min >= tau)
-    not_rec = err_default & ~(p_min >= tau)
+    recovered, tau_cf = _crossfit_recovered(p_min, is_min, err_default,
+                                            seed=RANDOM_STATE)
+    not_rec = err_default & ~recovered
 
     def frac(m):
         return float(m.sum() / n_err) if n_err else 0.0
@@ -203,7 +208,8 @@ def _decompose_nontree(instrument, name, benchmark, X, y):
         "instrument": instrument, "dataset": name, "benchmark": benchmark,
         "n": len(y), "ir": ir, "n_classes": n_classes,
         "minority_size": int(is_min.sum()), "n_minority_err_default": n_err,
-        "tau": tau, "oob_coverage_mean": float(coverage.mean()),
+        "tau": tau, "tau_crossfit_mean": tau_cf,
+        "oob_coverage_mean": float(coverage.mean()),
         "frac_threshold_recoverable": frac(recovered),
         "frac_data_reducible": frac(not_rec & (cats == "data_limited")),
         "frac_irreducible": frac(not_rec & (cats == "irreducible")),
@@ -280,10 +286,11 @@ def _combine():
               f"| IR>3 thresh-recov={100*si.frac_threshold_recoverable.mean():.1f}% (n={len(si)})")
     if RF_COMBINED.exists():
         rf = pd.read_parquet(RF_COMBINED)
-        rf = rf[rf.n_minority_err_default >= 5][["dataset", "frac_threshold_recoverable"]]
+        rf = rf[rf.n_minority_err_argmax >= 5][["dataset", "benchmark", "frac_threshold_recoverable"]]
         rf = rf.rename(columns={"frac_threshold_recoverable": "tr_rf"})
         for inst in sorted(d.instrument.unique()):
-            s = d[d.instrument == inst][["dataset", "frac_threshold_recoverable"]].merge(rf, on="dataset")
+            s = d[d.instrument == inst][["dataset", "benchmark", "frac_threshold_recoverable"]].merge(
+                rf, on=["dataset", "benchmark"])
             if len(s) > 2:
                 r = np.corrcoef(s.frac_threshold_recoverable, s.tr_rf)[0, 1]
                 print(f"  per-dataset corr(thresh-recov, RF instrument) [{inst}]: "

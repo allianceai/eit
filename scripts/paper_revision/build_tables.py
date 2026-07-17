@@ -311,13 +311,16 @@ def table_datasets(force_registry: bool = False):
         r"\endfoot",
         r"\bottomrule", r"\endlastfoot",
     ]
+    # display-name corrections: internal keys are kept (caches/results are keyed
+    # on them) but the paper table must show the dataset each OpenML id actually is
+    display = {"oil_spill": "ipums_la_99-small", "thyroid": "thyroid-allbp"}
     for _, r in df.iterrows():
         oid = r["openml_id"]
         oid_s = "sklearn" if float(oid) < 0 else str(int(oid))
         ir_s = "--" if r["ir"] != r["ir"] else f"{r['ir']:.1f}"
         c_s = "--" if int(r["n_classes"]) < 0 else str(int(r["n_classes"]))
         lines.append(
-            f"\\texttt{{{_tex(r['name'])}}} & {oid_s} & {int(r['n'])} & "
+            f"\\texttt{{{_tex(display.get(r['name'], r['name']))}}} & {oid_s} & {int(r['n'])} & "
             f"{int(r['d'])} & {c_s} & {ir_s} \\\\")
     lines.append(r"\end{longtable}")
     (TABLES_DIR / "table_datasets.tex").write_text("\n".join(lines) + "\n")

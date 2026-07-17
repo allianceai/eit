@@ -6,10 +6,12 @@ Alliance AI).
 
 **TL;DR.** We introduce a *remedy decomposition* of the misclassified minority class:
 each minority error is assigned to the fix that would resolve it —
-*threshold-recoverable* (the model already ranks it correctly; only the default cutoff
-is wrong), *data-reducible* (more minority data would help), or *irreducible* (genuine
-class overlap). Across 79 real datasets the minority deficit is overwhelmingly
-**threshold-recoverable** (mean 69%; ~7% data-reducible, ~16% irreducible). This
+*threshold-recoverable* (its score already clears a cross-fitted, tuned decision
+threshold; only the default cutoff is wrong), *data-reducible* (more minority data
+would help), or *irreducible* (genuine class overlap). Across 79 real datasets the
+minority deficit is predominantly
+**threshold-recoverable** (mean 68%, 80% at imbalance ratio >3; ~6% data-reducible,
+~17% irreducible). This
 explains why oversampling raises balanced accuracy *without* improving ranking (AUC
 unchanged) and why a threshold move reproduces its benefit without synthetic data —
 oversampling enacts a class-prior shift in probability space, an implicit
@@ -41,8 +43,8 @@ requirements.txt          Python dependencies
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
 
-# headline: remedy decomposition of the minority deficit (mean 69% threshold-recoverable)
-python -m scripts.paper_revision.build_reducibility
+# headline: remedy decomposition of the minority deficit (mean 68% threshold-recoverable)
+python -m scripts.paper_revision.build_reducibility_v2 --combine-only --noise-mode global --write-table
 
 # threshold parity: the generative vs non-generative gap collapses at equal tuning
 python -m scripts.paper_revision.build_threshold_parity
@@ -68,6 +70,24 @@ ensemble-size sensitivity sweep (`run_m_sensitivity.py`); and a six-learner
 threshold-parity analysis with class-balanced calibration metrics
 (`run_threshold_parity.py`, results in `results/threshold_parity_v2/`). See the
 "Revision experiments" section of REPRODUCE.md for the mapping.
+
+## Post-review corrections (2026-07)
+
+Verifying the revised manuscript against this implementation surfaced two
+methodological gaps in the original headline computation, both corrected in
+`build_reducibility_v2.py` (the old `build_reducibility.py` and its results are
+retained for the audit trail): the default error set is now the ensemble's actual
+out-of-bag argmax mistakes (the previous `P(minority) < 0.5` rule over-counted
+errors on multiclass datasets), and the tuned threshold is now cross-fitted
+(previously selected on the same out-of-bag scores used to score recovery). The
+decomposition is measured on the unweighted ensemble — the off-the-shelf default
+model the paper analyzes — with class-weighted (`--noise-mode`) and
+standardized-geometry (`--standardize`) sensitivity passes included
+(`results/reducibility_v2*.parquet`). The corrected headline: threshold-recoverable
+68% mean (80% at IR>3) vs the previously reported 69%/74%. Two roster labels were
+also corrected: OpenML id 1018 is `ipums_la_99-small` (not the classic oil-spill
+set) and id 40474 is `thyroid-allbp` (not ann-thyroid); internal result keys keep
+the old names, the paper's dataset table shows the true ones (see REPRODUCE.md).
 
 All datasets are public (the `imbalanced-learn`/KEEL suite and OpenML) and are
 downloaded automatically on first use.

@@ -7,8 +7,12 @@ among errors + remedy shares of the minority deficit) is recomputed for
 M in {1, 2, 5, 10, 20} on a 10-dataset IR-spanning subset, everything else
 fixed (T=100, thresholds, seed).
 
-Output: results/paper_revision/m_sensitivity.parquet, plus a stability summary
+Output: results/paper_revision/m_sensitivity_v2.parquet, plus a stability summary
 (per-quantity max absolute deviation from the M=5 reference).
+
+v2 (post external review): uses build_reducibility_v2._decompose_v2 — argmax
+multiclass error set + cross-fitted tau — on the headline (unweighted) instrument.
+The old v1-definition results remain in m_sensitivity.parquet.
 
     python -m scripts.paper_revision.run_m_sensitivity --workers 8
 """
@@ -27,7 +31,7 @@ import pandas as pd
 
 from scripts.paper_revision.config import RESULTS_DIR
 
-OUT = RESULTS_DIR / "m_sensitivity.parquet"
+OUT = RESULTS_DIR / "m_sensitivity_v2.parquet"
 M_GRID = [1, 2, 5, 10, 20]
 # IR-spanning, small-to-medium subset (fast enough for M=20): KEEL names.
 DATASETS = ["ecoli", "yeast_me2", "abalone_19", "car_eval_34", "us_crime",
@@ -51,11 +55,12 @@ def _run_cell(cell):
     ds, m = cell
     try:
         from scripts.paper_revision.keel_datasets import load_keel
-        from scripts.paper_revision.build_reducibility import _decompose
+        from scripts.paper_revision.build_reducibility_v2 import _decompose_v2
         from threadpoolctl import threadpool_limits
         X, y = load_keel(ds)
         with threadpool_limits(limits=1):
-            row = _decompose(ds, "keel", X, y, triage_overrides={"n_forests": m})
+            row = _decompose_v2(ds, "keel", X, y, noise_mode="global",
+                                triage_overrides={"n_forests": m})
         row["n_forests"] = m
         return {"cell": cell, "status": "ok", "row": row}
     except Exception:

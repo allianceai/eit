@@ -17,8 +17,8 @@ being \emph{wrong} and ask \emph{which remedy applies}. Our decomposition differ
 in three ways: (i) it operates on the \emph{misclassified minority} and maps each
 error to a remedy (move the threshold, add data, or accept it) rather than
 scoring difficulty; (ii) it introduces a \emph{threshold-recoverable} class (the
-model already ranks the instance correctly and only the default cutoff is wrong),
-an axis absent from prior difficulty taxonomies; and (iii) it combines a
+model's score already places the instance above a tuned operating point; only the
+default cutoff is wrong), an axis absent from prior difficulty taxonomies; and (iii) it combines a
 model-based aleatoric--epistemic decomposition (separating Bayes-rate ambiguity
 from sample-size limits, which k-NN typing cannot) with a local class-ratio
 measure, used as a diagnostic rather than as a competing oversampler.
@@ -134,8 +134,8 @@ whereas we supply the instance-level diagnosis and the mechanism that explain
 \emph{why} aleatoric-region generation hurts
 (Proposition~\ref{prop:cross}, \S\ref{sec:results:interventional}), and our
 remedy decomposition shows the epistemic slice such methods can address is
-small ($\sim$7\% of the minority deficit) next to the threshold-recoverable
-majority ($\sim$69\%), which needs no generation at all.
+small ($\sim$6\% of the minority deficit) next to the threshold-recoverable
+majority ($\sim$68\%), which needs no generation at all.
 
 \paragraph{Label noise detection.}
 Confident Learning \cite{northcutt2021confident} estimates the joint

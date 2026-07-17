@@ -21,12 +21,17 @@ LABELS = {"rf": "Random forests (paper instrument)",
 
 
 def table_nontree():
-    rf = pd.read_parquet(RESULTS_DIR / "reducibility.parquet")
-    rf = rf[rf.n_minority_err_default >= 5].copy()
+    # v2 sources (post external review): argmax error set + cross-fitted tau,
+    # unweighted RF instrument (the headline instrument, reducibility_v2_global)
+    from scripts.paper_revision.build_reducibility_v2 import _paper_roster
+    rf = pd.read_parquet(RESULTS_DIR / "reducibility_v2_global.parquet")
+    rf = _paper_roster(rf)
+    rf = rf[rf.n_minority_err_argmax >= 5].copy()
     rf["instrument"] = "rf"
-    nt = pd.read_parquet(RESULTS_DIR / "reducibility_nontree.parquet")
+    nt = pd.read_parquet(RESULTS_DIR / "reducibility_nontree_v2.parquet")
+    nt = _paper_roster(nt)
     nt = nt[nt.n_minority_err_default >= 5]
-    rf_tr = rf.set_index("dataset")["frac_threshold_recoverable"]
+    rf_tr = rf.set_index(["dataset", "benchmark"])["frac_threshold_recoverable"]
 
     lines = [r"\begin{tabular}{lrrrrrr}", r"\toprule",
              r"Instrument & thr.-rec. & (median) & data-red. & irred. & noise & $r$ vs RF \\",
@@ -36,7 +41,7 @@ def table_nontree():
         if inst == "rf":
             corr = "---"
         else:
-            j = s.set_index("dataset")["frac_threshold_recoverable"].to_frame("tr").join(
+            j = s.set_index(["dataset", "benchmark"])["frac_threshold_recoverable"].to_frame("tr").join(
                 rf_tr.to_frame("tr_rf"), how="inner").dropna()
             corr = f"{np.corrcoef(j.tr, j.tr_rf)[0, 1]:.2f}"
         lines.append(
@@ -52,7 +57,7 @@ def table_nontree():
 
 
 def table_msens():
-    df = pd.read_parquet(RESULTS_DIR / "m_sensitivity.parquet")
+    df = pd.read_parquet(RESULTS_DIR / "m_sensitivity_v2.parquet")
     ref = df[df.n_forests == 5].set_index("dataset")
     cat_cols = ["frac_errors_cat1", "frac_errors_cat2", "frac_errors_cat3"]
     lines = [r"\begin{tabular}{lrrrr}", r"\toprule",

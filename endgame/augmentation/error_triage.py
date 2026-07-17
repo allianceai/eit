@@ -176,6 +176,7 @@ class ErrorTriage(BaseEstimator):
         X, y = check_X_y(X, y)
         self.classes_ = np.unique(y)
         self._y_fit = y  # retained for class-aware noise gating in _assign_categories
+        self._X_fit = X  # retained for held-out geometry signals (categorize_heldout)
         n_samples = len(X)
 
         # Step 1: Train ensemble of forests with OOB enabled
@@ -230,8 +231,10 @@ class ErrorTriage(BaseEstimator):
                 oob_score=True,
                 n_jobs=self.n_jobs,
                 random_state=seed,
-                # "balanced" mode: balanced bootstrap so minority class probabilities
-                # are not suppressed by a majority-biased ensemble.
+                # "balanced" mode: class-balanced instance weights (inverse class
+                # frequency) so minority class probabilities are not suppressed by
+                # a majority-biased ensemble. NB this is sklearn class_weight
+                # reweighting on a standard bootstrap, not a balanced bootstrap.
                 class_weight=("balanced" if self.noise_mode == "balanced" else None),
             )
             rf.fit(X, y)
@@ -546,10 +549,26 @@ class ErrorTriage(BaseEstimator):
            represented locally (class_ratio ≥ threshold).  The error
            arises from genuine class overlap at the Bayes boundary.
         """
-        n_samples = len(self.error_mask_)
-        categories = np.full(n_samples, "correct", dtype=object)
+        return self._assign_from_signals(
+            error_mask=self.error_mask_,
+            noise_score=self.noise_score_,
+            local_error_rate=self.local_error_rate_,
+            mean_tcp=self.mean_true_class_prob_,
+            class_ratio=self.class_ratio_,
+            y=self._y_fit,
+        )
 
-        error_idx = np.where(self.error_mask_)[0]
+    def _assign_from_signals(self, *, error_mask, noise_score, local_error_rate,
+                             mean_tcp, class_ratio, y):
+        """Shared category-assignment logic over pre-computed per-instance signals.
+
+        Used both for the in-sample fit (``_assign_categories``) and for held-out
+        instances (``categorize_heldout``), so the two paths apply IDENTICAL
+        decision rules and thresholds.
+        """
+        n_samples = len(error_mask)
+        categories = np.full(n_samples, "correct", dtype=object)
+        error_idx = np.where(error_mask)[0]
 
         # Secondary tcp gate for Cat2 (permissive at default ratio=1.0)
         n_classes = max(len(self.classes_), 1)
@@ -559,45 +578,130 @@ class ErrorTriage(BaseEstimator):
         # Imbalance-aware noise gating (see noise_mode in __init__). For "global" and
         # "balanced" these reduce to the original absolute threshold for all instances
         # (balanced changes only the ensemble, not this logic).
-        y_fit = self._y_fit
-        uniq, counts = np.unique(y_fit, return_counts=True)
+        uniq, counts = np.unique(self._y_fit, return_counts=True)
         majority_cls = uniq[int(np.argmax(counts))]
         noise_tcp_thr = np.full(n_samples, self.noise_tcp_threshold, dtype=float)
         noise_allowed = np.ones(n_samples, dtype=bool)
         if self.noise_mode == "class_conditional":
             for c in uniq:
-                m = y_fit == c
-                med = float(np.median(self.mean_true_class_prob_[m])) if m.any() else 1.0
+                m = y == c
+                med = float(np.median(mean_tcp[m])) if m.any() else 1.0
                 noise_tcp_thr[m] = self.noise_tcp_threshold * med
         elif self.noise_mode == "protect_minority":
-            noise_allowed = (y_fit == majority_cls)
+            noise_allowed = (y == majority_cls)
 
         for i in error_idx:
-            # Noise: high noise_score + isolated (low local error rate)
-            # + very low tcp (model assigns <8% to the given label,
-            # strongly suggesting the label is wrong). The tcp threshold and
-            # whether noise is allowed for this instance's class depend on noise_mode.
             is_noise = (
                 noise_allowed[i]
-                and self.noise_score_[i] > self.noise_threshold
-                and self.local_error_rate_[i] < 0.5
-                and self.mean_true_class_prob_[i] < noise_tcp_thr[i]
+                and noise_score[i] > self.noise_threshold
+                and local_error_rate[i] < 0.5
+                and mean_tcp[i] < noise_tcp_thr[i]
             )
             if is_noise:
                 categories[i] = "noise"
             elif (
-                self.class_ratio_[i] < self.cat2_class_ratio_threshold
-                and self.mean_true_class_prob_[i] < tcp_cat2
+                class_ratio[i] < self.cat2_class_ratio_threshold
+                and mean_tcp[i] < tcp_cat2
             ):
-                # Instance's class is severely underrepresented
-                # locally → data gap (sparsity)
                 categories[i] = "data_limited"
             else:
-                # Class is adequately represented locally → Bayes
-                # boundary (irreducible)
                 categories[i] = "irreducible"
 
         return categories
+
+    # ------------------------------------------------------------------
+    # Held-out (out-of-fold) categorization
+    # ------------------------------------------------------------------
+    def categorize_heldout(self, X_new, y_new):
+        """Categorize instances the forests were NOT trained on.
+
+        Every model-derived signal (error indicator, mean true-class probability,
+        aleatoric/epistemic uncertainty, noise consensus) is computed by predicting
+        the held-out points with forests that never saw them -- i.e. genuinely
+        out-of-fold, a strictly stronger guarantee than the OOB estimates used
+        within :meth:`fit`. Geometry signals (local class ratio, local error rate,
+        neighbour noise) are measured against the fitted TRAINING set. Used by the
+        inner-CV out-of-fold robustness check (run_triage_oof.py) so the reported
+        Cat1/2/3 fractions and the aleatoric/epistemic separation can be shown to
+        hold on held-out data.
+
+        Returns a dict with keys: categories, error_mask, aleatoric, epistemic,
+        total_uncertainty, mean_true_class_prob.
+        """
+        check_is_fitted(self, "forests_")
+        X_new = np.asarray(X_new)
+        y_new = np.asarray(y_new)
+        n = len(X_new)
+        n_classes = len(self.classes_)
+        class_to_idx = {c: i for i, c in enumerate(self.classes_)}
+
+        forest_probs, tree_probs = [], []
+        for rf in self.forests_:
+            fmap = np.array([class_to_idx[c] for c in rf.classes_])
+            fp = np.zeros((n, n_classes)); fp[:, fmap] = rf.predict_proba(X_new)
+            forest_probs.append(fp)
+            for tree in rf.estimators_:
+                tp = np.zeros((n, n_classes)); tp[:, fmap] = tree.predict_proba(X_new)
+                tree_probs.append(tp)
+        forest_probs = np.array(forest_probs)   # (F, n, C)
+        tree_probs = np.array(tree_probs)       # (T, n, C)
+
+        forest_pred = self.classes_[np.argmax(forest_probs, axis=2)]   # (F, n)
+        misclass_freq = (forest_pred != y_new[None, :]).mean(axis=0)   # (n,)
+        error_mask = misclass_freq >= self.misclass_freq_threshold
+        conf = forest_probs.max(axis=2).mean(axis=0)                   # (n,)
+        true_idx = np.array([class_to_idx.get(c, 0) for c in y_new])
+        mean_tcp = forest_probs[:, np.arange(n), true_idx].mean(axis=0)
+
+        mean_p = tree_probs.mean(axis=0)                               # (n, C)
+        total = self._entropy(mean_p)
+        per_tree_ent = np.array([self._entropy(tree_probs[t]) for t in range(len(tree_probs))])
+        aleatoric = per_tree_ent.mean(axis=0)
+        epistemic = np.maximum(total - aleatoric, 0.0)
+
+        class_ratio = self._heldout_class_ratio(X_new, y_new)
+        local_error_rate = self._heldout_local_error_rate(X_new)
+        noise_score = self._heldout_noise_score(X_new, y_new, misclass_freq, conf, forest_pred)
+
+        categories = self._assign_from_signals(
+            error_mask=error_mask, noise_score=noise_score,
+            local_error_rate=local_error_rate, mean_tcp=mean_tcp,
+            class_ratio=class_ratio, y=y_new,
+        )
+        return dict(categories=categories, error_mask=error_mask,
+                    aleatoric=aleatoric, epistemic=epistemic,
+                    total_uncertainty=total, mean_true_class_prob=mean_tcp)
+
+    def _heldout_neighbors(self, X_new):
+        k = min(self.noise_neighbor_k, len(self._X_fit))
+        nn = NearestNeighbors(n_neighbors=max(1, k), metric="euclidean", n_jobs=self.n_jobs)
+        nn.fit(self._X_fit)
+        _, idx = nn.kneighbors(X_new)
+        return idx
+
+    def _heldout_class_ratio(self, X_new, y_new):
+        idx = self._heldout_neighbors(X_new)
+        same = (self._y_fit[idx] == y_new[:, None]).mean(axis=1)
+        class_freq = {c: max((self._y_fit == c).mean(), 1e-10) for c in self.classes_}
+        expected = np.array([class_freq.get(yi, 1e-10) for yi in y_new])
+        return same / expected
+
+    def _heldout_local_error_rate(self, X_new):
+        idx = self._heldout_neighbors(X_new)
+        return self.error_mask_[idx].mean(axis=1)
+
+    def _heldout_noise_score(self, X_new, y_new, misclass_freq, conf, forest_pred):
+        n = len(X_new)
+        hi_conf = (conf > self.noise_confidence_threshold).astype(float)
+        score = 0.4 * (misclass_freq * hi_conf)
+        idx = self._heldout_neighbors(X_new)
+        same = (self._y_fit[idx] == y_new[:, None]).mean(axis=1)
+        nb = (1.0 - same / max(self.noise_same_class_threshold, 1e-10)) * hi_conf
+        score = score + 0.3 * np.clip(nb, 0.0, 1.0)
+        all_agree = np.all(forest_pred == forest_pred[0][None, :], axis=0)
+        all_wrong = forest_pred[0] != y_new
+        score = score + 0.3 * (all_agree.astype(float) * all_wrong.astype(float) * hi_conf)
+        return score
 
     def get_category_mask(self, category):
         """Return boolean mask for instances in the given category.

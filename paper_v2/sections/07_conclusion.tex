@@ -4,9 +4,9 @@ We introduced a remedy decomposition of the misclassified minority class that so
 each error into \emph{threshold-recoverable}, \emph{data-reducible} (epistemic), or
 \emph{irreducible} (aleatoric), and used it to explain why class-imbalance
 correction so often reduces to a decision-threshold change. Across 79 real datasets
-the minority deficit is overwhelmingly threshold-recoverable (mean $69\%$, $74\%$ at
-imbalance ratio $>3$): the classifier already ranks these instances correctly and
-only the default cutoff is wrong. This accounts mechanistically for a documented but
+the minority deficit is predominantly threshold-recoverable (mean $68\%$, $80\%$ at
+imbalance ratio $>3$): the classifier's scores already place these instances above
+a tuned operating point and only the default cutoff is wrong. This accounts mechanistically for a documented but
 unexplained regularity, namely that SMOTE-family oversampling does not improve ranking
 and a threshold
 move reproduces its benefit without synthetic generation or probability

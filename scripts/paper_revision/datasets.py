@@ -55,10 +55,16 @@ DATASETS: list[DatasetSpec] = [
     _S("sick", 38, 3772, 29, "binary"),
     _S("abalone", 183, 4177, 8, "multiclass"),
     _S("yeast", 181, 1484, 8, "multiclass"),
-    _S("oil_spill", 1018, 937, 49, "binary"),
+    # NOTE: id 1018 is actually OpenML "ipums_la_99-small" (8844x56, binarized),
+    # NOT the classic 937x49 oil-spill set (that is OpenML 311). The internal key
+    # "oil_spill" is retained because caches and result parquets are keyed on it;
+    # display surfaces (paper dataset table) show the true name.
+    _S("oil_spill", 1018, 8844, 56, "binary"),
     _S("mammography", 310, 11183, 6, "binary"),
     _S("wine_quality", 287, 6497, 11, "multiclass"),
-    _S("thyroid", 40474, 7200, 21, "multiclass"),
+    # NOTE: id 40474 is UCI "thyroid-allbp" (2800x26, 5 classes), not ann-thyroid
+    # (7200x21). Internal key retained; display surfaces show "thyroid-allbp".
+    _S("thyroid", 40474, 2800, 26, "multiclass"),
     _S("satimage", 182, 6430, 36, "multiclass"),
     _S("creditcard", 1597, 284807, 30, "binary"),
     _S("webpage", 350, 34780, 300, "binary"),
@@ -75,7 +81,7 @@ DATASETS: list[DatasetSpec] = [
     _S("page-blocks", 30, 5473, 10, "multiclass"),
     _S("sonar", 40, 208, 60, "binary"),
     _S("eeg-eye-state", 1471, 14980, 14, "binary"),
-    _S("waveform", 60, 5000, 21, "multiclass"),
+    _S("waveform", 60, 5000, 40, "multiclass"),  # id 60 = waveform-5000, 40-feature variant
     _S("madelon", 1485, 2600, 500, "binary"),
     _S("GesturePhaseSegmentationProcessed", 4538, 9873, 32, "multiclass"),
     _S("JapaneseVowels", 375, 9961, 14, "multiclass"),
