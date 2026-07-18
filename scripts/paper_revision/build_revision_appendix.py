@@ -15,7 +15,7 @@ import pandas as pd
 from scripts.paper_revision.config import RESULTS_DIR
 
 TAB = Path("paper_v2/tables")
-LABELS = {"rf": "Random forests (paper instrument)",
+LABELS = {"rf": "Random forests (paper)",
           "mlp_bag": "Bagged MLPs",
           "logreg_bag": "Bagged logistic regression"}
 

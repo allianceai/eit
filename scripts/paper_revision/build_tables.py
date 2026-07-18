@@ -56,13 +56,16 @@ def _tex(s: str) -> str:
     return s.replace("_", r"\_")
 
 
-def _emit(name, label, caption, colspec, header, body_rows, placement="t"):
+def _emit(name, label, caption, colspec, header, body_rows, placement="t",
+          fontsize=None, colsep=None):
     """Write a complete table float carrying its own caption + label."""
     lines = [
         f"\\begin{{table}}[{placement}]",
         r"\centering",
         f"\\caption{{{caption}}}",
         f"\\label{{{label}}}",
+        *([f"\\{fontsize}"] if fontsize else []),
+        *([f"\\setlength{{\\tabcolsep}}{{{colsep}}}"] if colsep else []),
         f"\\begin{{tabular}}{{{colspec}}}",
         r"\toprule",
         header + r" \\",
@@ -142,6 +145,8 @@ def table3_smote_comparison():
         "lrrrrrr",
         r"Method (vs.\ SMOTE) & Mean Acc & WR Acc & $p_{\text{Acc}}$ & Mean BAcc & WR BAcc & $p_{\text{BAcc}}$",
         body,
+        fontsize="footnotesize",
+        colsep="2.5pt",
     )
 
 
@@ -296,6 +301,7 @@ def table_datasets(force_registry: bool = False):
     df = build_dataset_registry(force=force_registry)
     header = r"Dataset & OpenML ID & $n$ & $d$ & $C$ & IR \\"
     lines = [
+        r"\begingroup\footnotesize",
         r"\begin{longtable}{lrrrrc}",
         rf"\caption{{Full dataset listing ({len(df)} datasets; the recovered "
         r"original-paper roster). $n$ = instances; $d$ = features; $C$ = classes; "
@@ -323,6 +329,7 @@ def table_datasets(force_registry: bool = False):
             f"\\texttt{{{_tex(display.get(r['name'], r['name']))}}} & {oid_s} & {int(r['n'])} & "
             f"{int(r['d'])} & {c_s} & {ir_s} \\\\")
     lines.append(r"\end{longtable}")
+    lines.append(r"\endgroup")
     (TABLES_DIR / "table_datasets.tex").write_text("\n".join(lines) + "\n")
 
 

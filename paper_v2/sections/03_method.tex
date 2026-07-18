@@ -14,6 +14,8 @@ pseudocode.
 
 \begin{figure}[!tp]
 \centering
+% the tikzpicture's natural width slightly exceeds \linewidth; scale to fit
+\resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[
   font=\footnotesize,
   stage/.style={draw, rounded corners, align=center, inner sep=3pt,
@@ -51,7 +53,7 @@ pseudocode.
 \draw[->] (triage.south -| remedy.north) -- (remedy.north);
 \draw[->] (remedy) -- (outp);
 \draw[->] (outp.south) -- (outp.south |- eval.north);
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{End-to-end pipeline. Every signal that drives the categorization (error
 set, true-class probability, noise consensus) comes from out-of-bag predictions
 of a class-weighted random-forest ensemble (the uncertainty values of

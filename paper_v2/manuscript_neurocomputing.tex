@@ -34,6 +34,9 @@
 % elsarticle's appendix \ref already expands to "Appendix A"; \appref avoids the
 % duplicated word ("Appendix Appendix B") that a literal "Appendix~\ref" produces.
 \newcommand{\appref}[1]{\ref{#1}}
+% allow interword stretch on lines with unbreakable tokens (CIs, compound terms)
+% rather than letting them protrude into the right margin
+\setlength{\emergencystretch}{3em}
 
 \begin{document}
 \begin{frontmatter}
