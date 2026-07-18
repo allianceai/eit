@@ -13,10 +13,10 @@ only $\sim$6\% is data-reducible and $\sim$17\% irreducible. This explains a kno
 but unexplained regularity: SMOTE-family resampling does not improve ranking (AUC
 is unchanged) and a threshold move reproduces its benefit without synthetic
 generation; single undertrained neural networks, whose ranking imbalance itself
-corrupts, are the exception. We give the mechanism: on controlled mixtures with a
+corrupts, are the exception. On controlled mixtures with a
 \emph{known} Bayes boundary, standard SMOTE places an overlap-dependent fraction of
-synthetic points \emph{across} it, and a short proposition shows why interpolating
-boundary seeds crosses into majority-posterior space. Once every strategy receives
+synthetic points \emph{across} that boundary, and a short proposition shows why
+interpolating boundary seeds crosses into majority-posterior space. Once every strategy receives
 the same out-of-fold threshold tuning, the default-threshold gap between
 non-generative and generative families collapses to within $\pm1$\,pp across three
 base learners (against $+6.4$\,pp from tuning the threshold alone): the SMOTE
